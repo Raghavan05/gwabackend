@@ -15,7 +15,7 @@ const Patient = require('../models/Patient');
 const Prescription = require('../models/Prescription');
 const Notification = require('../models/Notification');
 const Insurance = require('../models/Insurance');
-
+const jwt = require('jsonwebtoken');
 
 require('dotenv').config();
 
@@ -29,15 +29,20 @@ const upload = multer({ dest: 'uploads/' });
 router.use(methodOverride('_method'));
 
 function isLoggedIn(req, res, next) {
-    if (req.session && req.session.user) {
-        req.user=req.session.user
-      return next();
-    } else {
-      res.status(401).json({ success: false, message: 'Unauthorized access attempt.' });
+    const token = req.headers.authorization && req.headers.authorization.split(' ')[1];
+  
+    if (!token) {
+      return res.status(401).json({ error: 'Unauthorized. Please log in.' });
+    }
+  
+    try {
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      req.user = decoded;
+      next();
+    } catch (error) {
+      return res.status(401).json({ error: 'Unauthorized. Invalid token.' });
     }
   }
-  
-  
   
 
   
@@ -122,7 +127,7 @@ router.get('/profile', isLoggedIn, async (req, res) => {
   
   router.get('/profile/update', isLoggedIn, async (req, res) => {
     try {
-        const doctorEmail = req.session.user.email;
+        const doctorEmail = req.user.email; // Use req.user from the token
         const doctor = await Doctor.findOne({ email: doctorEmail }).lean();
 
         if (!doctor) {
@@ -131,7 +136,7 @@ router.get('/profile', isLoggedIn, async (req, res) => {
 
         const insurances = await Insurance.find({ '_id': { $in: doctor.insurances } }).select('name logo');
         const blogs = await Blog.find({ authorId: doctor._id, verificationStatus: 'Verified' });
-        res.json({ doctor, insurances ,blogs });
+        res.json({ doctor, insurances, blogs });
     } catch (err) {
         console.error(err.message);
         res.status(500).send('Server Error');

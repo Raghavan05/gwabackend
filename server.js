@@ -21,10 +21,11 @@ app.set('view engine', 'ejs');
 app.use(express.static('public'));
 
 app.use(cors({
-  origin: ['http://localhost:3000', 'https://medxbay-deploy-1-431103.uc.r.appspot.com'],
-  methods: ['GET', 'POST', 'PUT', 'DELETE'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-  credentials: true
+  origin: 'http://localhost:3000', 
+  methods: 'GET,POST,PUT,DELETE',
+  allowedHeaders: 'Content-Type,Authorization',
+  credentials: true 
+
 }));
 
 
@@ -42,7 +43,11 @@ app.use(session({
   resave: false,
   saveUninitialized: false,
   store: sessionStore,
-  cookie: { maxAge: 180 * 60 * 1000 } 
+  cookie: { maxAge: 180 * 60 * 1000,
+    httpOnly: true,
+    secure: true, 
+    sameSite: 'None'
+   } 
 }));
 
 app.use(flash());

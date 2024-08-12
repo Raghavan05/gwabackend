@@ -16,20 +16,28 @@ const Insurance = require('../models/Insurance');
 
 const storage = multer.memoryStorage();
 const upload = multer({ storage: storage });
+const jwt = require('jsonwebtoken');
 
 function isLoggedIn(req, res, next) {
-  if (req.session.user && req.session.user.role === 'patient') {
-    req.user = req.session.user;
-    return next();
-  }
-  
+  const token = req.headers.authorization && req.headers.authorization.split(' ')[1];
 
-  if (req.headers.accept && req.headers.accept.includes('application/json')) {
-    return res.status(401).json({ error: 'Unauthorized. Please log in.' });
+  if (!token) {
+    if (req.headers.accept && req.headers.accept.includes('application/json')) {
+      return res.status(401).json({ error: 'Unauthorized. Please log in.' });
+    }
+    return res.redirect('/auth/login');
   }
-  
 
-  res.redirect('/auth/login');
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    req.user = decoded;
+    next();
+  } catch (error) {
+    if (req.headers.accept && req.headers.accept.includes('application/json')) {
+      return res.status(401).json({ error: 'Unauthorized. Invalid token.' });
+    }
+    res.redirect('/auth/login');
+  }
 }
 
 
