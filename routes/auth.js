@@ -57,7 +57,7 @@ const sendVerificationEmail = async (email, token, role) => {
     }
   });
 
-  const verificationLink = `http://localhost:3000/auth/verify-email?token=${token}&role=${role}`;
+  const verificationLink = `https://beta.medxbay.com/auth/verify-email?token=${token}&role=${role}`;
 
 
   const mailOptions = {
@@ -282,8 +282,8 @@ router.get('/google/callback', async (req, res) => {
       req.session.user = existingUser;
       const userRole = existingUser.role;
       res.redirect(userRole === 'doctor'
-        ? 'http://localhost:3000Doctor/profile/Edit'
-        : 'http://localhost:3000userprofile');
+        ? 'http://localhost:3000/Doctor/profile/Edit'
+        : 'http://localhost:3000/userprofile');
     } else {
       const role = JSON.parse(state).role;
 
@@ -376,7 +376,7 @@ router.post('/forgot-password', async (req, res) => {
 
     await user.save();
 
-    const resetUrl = `https://medxbay-deploy-1-431103.uc.r.appspot.com/auth/reset-password?token=${resetToken}`;
+    const resetUrl = `https://beta.medxbay.com/auth/reset-password?token=${resetToken}`;
     await sendResetPasswordEmail(user.email, resetUrl);
 
     return res.json({ success: true, message: 'A password reset link has been sent to your email.' });
