@@ -9,13 +9,9 @@ const Patient = require('../models/Patient');
 const Doctor = require('../models/Doctor');
 const Admin = require('../models/Admin');
 const crypto = require('crypto');
-const jwt = require('jsonwebtoken');
+
 const router = express.Router();
 
-
-
-const key = crypto.randomBytes(32).toString('hex');
-console.log(key);
 router.use(session({
   secret: process.env.SESSION_SECRET,
   resave: false,
@@ -23,17 +19,7 @@ router.use(session({
 }));
 
 router.use(flash());
-const generateToken = (user) => {
-  return jwt.sign(
-    {
-      id: user._id,
-      email: user.email,
-      role: user.role
-    },
-    process.env.JWT_SECRET, // Replace with your JWT secret key
-    { expiresIn: '1h' } // Token expiry
-  );
-};
+
 router.use((req, res, next) => {
   res.locals.success_msg = req.flash('success_msg');
   res.locals.error_msg = req.flash('error_msg');
@@ -71,7 +57,7 @@ const sendVerificationEmail = async (email, token, role) => {
     }
   });
 
-  const verificationLink = `https://medxbay-deploy-1-431103.uc.r.appspot.com/auth/verify-email?token=${token}&role=${role}`;
+  const verificationLink = `http://localhost:3000/auth/verify-email?token=${token}&role=${role}`;
 
 
   const mailOptions = {
@@ -218,26 +204,21 @@ router.post('/login', async (req, res) => {
       return res.status(401).json({ success: false, message: 'Invalid Credentials' });
     }
 
-    // Generate token
-    const token = generateToken(user);
-
-    return res.status(200).json({
-      success: true,
-      message: 'Login successful',
-      user: {
-        _id: user._id,
-        email: user.email,
-        role: user.role,
-        subscriptionType: user.subscriptionType,
-        subscriptionVerification: user.subscriptionVerification
-      },
-      token // Include token in the response
-    });
+    req.session.user = {
+      _id: user._id,
+      email: user.email,
+      role: user.role,
+      subscriptionType: user.subscriptionType,
+      subscriptionVerification: user.subscriptionVerification
+    };
+    console.log('Session data after login:', req.session);
+    return res.status(200).json({ success: true, message: 'Login successful', user });
   } catch (err) {
     console.error('Error in login:', err);
     return res.status(500).json({ success: false, message: 'Server error' });
   }
 });
+
 
 
 const CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
@@ -301,8 +282,8 @@ router.get('/google/callback', async (req, res) => {
       req.session.user = existingUser;
       const userRole = existingUser.role;
       res.redirect(userRole === 'doctor'
-        ? 'https://medxbay-deploy-1-431103.uc.r.appspot.com/Doctor/profile/Edit'
-        : 'https://medxbay-deploy-1-431103.uc.r.appspot.com/userprofile');
+        ? 'http://localhost:3000Doctor/profile/Edit'
+        : 'http://localhost:3000userprofile');
     } else {
       const role = JSON.parse(state).role;
 
@@ -329,8 +310,8 @@ router.get('/google/callback', async (req, res) => {
 
       req.session.user = newUser;
       res.redirect(role === 'doctor'
-        ? 'https://medxbay-deploy-1-431103.uc.r.appspot.com/Doctor/profile/Edit'
-        : 'https://medxbay-deploy-1-431103.uc.r.appspot.com/profile/userprofile');
+        ? 'http://localhost:3000/Doctor/profile/Edit'
+        : 'http://localhost:3000/profile/userprofile');
     }
   } catch (err) {
     console.error('Error in Google OAuth callback:', err);
