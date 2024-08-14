@@ -74,7 +74,6 @@ router.get('/signup/patient', (req, res) => {
   const showOtpForm = req.session.newUser && req.session.newUser.otp;
   res.render('signup_patient', { showOtpForm });
 });
-
 router.post('/signup/patient', async (req, res) => {
   const { name, email, password, phoneNumber } = req.body;
 
@@ -82,29 +81,27 @@ router.post('/signup/patient', async (req, res) => {
     let existingUser = await Patient.findOne({ email });
 
     if (existingUser) {
-      req.flash('error_msg', 'User already exists');
-      return res.redirect('/auth/signup/patient');
+      return res.status(400).json({ error: 'User already exists' });
     }
 
     const token = generateVerificationToken();
     await sendVerificationEmail(email, token, 'patient');
 
+    const hashedPassword = await bcrypt.hash(password, 10);
     const newPatient = new Patient({
       name,
       email,
-      password: await bcrypt.hash(password, 10),
+      password: hashedPassword,
       phoneNumber,
       verificationToken: token
     });
 
     await newPatient.save();
 
-    req.flash('success_msg', 'Verification email has been sent to your email. Please verify.');
-    return res.redirect('/auth/signup/patient');
+    return res.status(200).json({ success: 'Verification email has been sent to your email. Please verify.' });
   } catch (err) {
     console.error('Error in patient signup:', err);
-    req.flash('error_msg', 'Server error');
-    return res.redirect('/auth/signup/patient');
+    return res.status(500).json({ error: 'Server error' });
   }
 });
 
@@ -113,6 +110,7 @@ router.get('/signup/doctor', (req, res) => {
   res.render('signup_doctor', { showOtpForm });
 });
 
+
 router.post('/signup/doctor', async (req, res) => {
   const { name, email, password, phoneNumber } = req.body;
 
@@ -120,31 +118,30 @@ router.post('/signup/doctor', async (req, res) => {
     let existingUser = await Doctor.findOne({ email });
 
     if (existingUser) {
-      req.flash('error_msg', 'User already exists');
-      return res.redirect('/auth/signup/doctor');
+      return res.status(400).json({ error: 'User already exists' });
     }
 
     const token = generateVerificationToken();
     await sendVerificationEmail(email, token, 'doctor');
 
+    const hashedPassword = await bcrypt.hash(password, 10);
     const newDoctor = new Doctor({
       name,
       email,
-      password: await bcrypt.hash(password, 10),
+      password: hashedPassword,
       phoneNumber,
       verificationToken: token
     });
 
     await newDoctor.save();
 
-    req.flash('success_msg', 'Verification email has been sent to your email. Please verify.');
-    return res.redirect('/auth/signup/doctor');
+    return res.status(200).json({ success: 'Verification email has been sent to your email. Please verify.' });
   } catch (err) {
     console.error('Error in doctor signup:', err);
-    req.flash('error_msg', 'Server error');
-    return res.redirect('/auth/signup/doctor');
+    return res.status(500).json({ error: 'Server error' });
   }
 });
+
 
 router.get('/verify-email', async (req, res) => {
   const { token, role } = req.query;
@@ -158,20 +155,17 @@ router.get('/verify-email', async (req, res) => {
     }
 
     if (!user) {
-      req.flash('error_msg', 'Invalid or expired verification link');
-      return res.redirect(`/auth/signup/${role}`);
+      return res.status(400).json({ success: false, message: 'Invalid or expired verification link' });
     }
 
     user.isVerified = true;
     user.verificationToken = undefined;
     await user.save();
 
-    req.flash('success_msg', 'Your account has been verified. You can now login.');
-    return res.redirect('/auth/login');
+    return res.status(200).json({ success: true, message: 'Your account has been verified. You can now login.' });
   } catch (err) {
     console.error('Error in email verification:', err);
-    req.flash('error_msg', 'Server error');
-    return res.redirect('/auth/signup');
+    return res.status(500).json({ success: false, message: 'Server error' });
   }
 });
 
@@ -283,7 +277,7 @@ router.get('/google/callback', async (req, res) => {
       const userRole = existingUser.role;
       res.redirect(userRole === 'doctor'
         ? 'http://localhost:3000/Doctor/profile/Edit'
-        : 'http://localhost:3000/userprofile');
+        : 'http://localhost:3000/profile/userprofile');
     } else {
       const role = JSON.parse(state).role;
 
