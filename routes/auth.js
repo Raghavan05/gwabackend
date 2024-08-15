@@ -74,6 +74,7 @@ router.get('/signup/patient', (req, res) => {
   const showOtpForm = req.session.newUser && req.session.newUser.otp;
   res.render('signup_patient', { showOtpForm });
 });
+
 router.post('/signup/patient', async (req, res) => {
   const { name, email, password, phoneNumber } = req.body;
 
@@ -370,7 +371,7 @@ router.post('/forgot-password', async (req, res) => {
 
     await user.save();
 
-    const resetUrl = `http://localhost:8000/auth/reset-password?token=${resetToken}`;
+    const resetUrl = `http://localhost:3000/reset-password?token=${resetToken}`;
     await sendResetPasswordEmail(user.email, resetUrl);
 
     return res.json({ success: true, message: 'A password reset link has been sent to your email.' });
@@ -456,9 +457,10 @@ router.get('/reset-password', async (req, res) => {
     return res.status(500).json({ success: false, message: 'Server error' });
   }
 });
-
 router.post('/reset-password', async (req, res) => {
   const { token, newPassword, confirmPassword } = req.body;
+
+  console.log('Received data:', { token, newPassword, confirmPassword });
 
   if (!token || !newPassword || !confirmPassword) {
     return res.status(400).json({ success: false, message: 'Please fill all fields' });
@@ -490,5 +492,6 @@ router.post('/reset-password', async (req, res) => {
     return res.status(500).json({ success: false, message: 'Server error' });
   }
 });
+
 
 module.exports = router;
