@@ -156,20 +156,22 @@ router.get('/verify-email', async (req, res) => {
     }
 
     if (!user) {
-      return res.status(400).json({ success: false, message: 'Invalid or expired verification link' });
+      return res.redirect('http://localhost:3000/verify/login');
+      // return res.redirect('https://beta.medxbay.com/');
     }
 
     user.isVerified = true;
     user.verificationToken = undefined;
     await user.save();
 
-    return res.status(200).json({ success: true, message: 'Your account has been verified. You can now login.' });
+    return res.redirect('http://localhost:3000');
+    // return res.redirect('https://beta.medxbay.com/');
   } catch (err) {
     console.error('Error in email verification:', err);
-    return res.status(500).json({ success: false, message: 'Server error' });
+    return res.redirect('http://localhost:3000');
+    // return res.redirect('https://beta.medxbay.com/');
   }
 });
-
 
 
 
