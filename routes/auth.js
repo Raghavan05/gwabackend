@@ -57,7 +57,7 @@ const sendVerificationEmail = async (email, token, role) => {
     }
   });
 
-  const verificationLink = `http://localhost:8000/auth/verify-email?token=${token}&role=${role}`;
+  const verificationLink = `https://beta.medxbay.com/api/auth/verify-email?token=${token}&role=${role}`;
 
 
   const mailOptions = {
