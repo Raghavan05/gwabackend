@@ -57,7 +57,7 @@ const sendVerificationEmail = async (name, email, token, role) => {
     }
   });
 
-  const verificationLink = `https://beta.medxbay.com/api/verify-email?token=${token}&role=${role}`;
+  const verificationLink = `https://beta.medxbay.com/api/auth/verify-email?token=${token}&role=${role}`;
 
   const mailOptions = {
     from: process.env.EMAIL_USER,
@@ -409,7 +409,7 @@ router.post('/forgot-password', async (req, res) => {
 
     await user.save();
 
-    const resetUrl = `https://beta.medxbay.com/api/reset-password?token=${resetToken}`;
+    const resetUrl = `https://beta.medxbay.com/api/auth/reset-password?token=${resetToken}`;
 
     // const resetUrl = `http://localhost:8000/reset-password?token=${resetToken}`;
 
