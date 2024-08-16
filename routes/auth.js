@@ -256,7 +256,7 @@ router.get('/google', (req, res) => {
 
 router.get('/google/callback', async (req, res) => {
   const { code, state } = req.query;
-  const redirectUri = 'http://localhost:3000'; 
+  const redirectUri = 'https://beta.medxbay.com'; 
 
   try {
     const { tokens } = await oauth2Client.getToken(code);
@@ -279,8 +279,8 @@ router.get('/google/callback', async (req, res) => {
       req.session.user = existingUser;
       const userRole = existingUser.role;
       res.redirect(userRole === 'doctor'
-        ? 'http://localhost:3000/Doctor/profile/Edit'
-        : 'http://localhost:3000/profile/userprofile');
+        ? 'https://beta.medxbay.com/Doctor/profile/Edit'
+        : 'https://beta.medxbay.com/profile/userprofile');
     } else {
       const role = JSON.parse(state).role;
 
@@ -307,8 +307,8 @@ router.get('/google/callback', async (req, res) => {
 
       req.session.user = newUser;
       res.redirect(role === 'doctor'
-        ? 'http://localhost:3000/Doctor/profile/Edit'
-        : 'http://localhost:3000/profile/userprofile');
+        ? 'https://beta.medxbay.com/Doctor/profile/Edit'
+        : 'https://beta.medxbay.com/profile/userprofile');
     }
   } catch (err) {
     console.error('Error in Google OAuth callback:', err);
