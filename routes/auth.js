@@ -156,7 +156,7 @@ router.get('/verify-email', async (req, res) => {
     }
 
     if (!user) {
-      return res.redirect('http://localhost:3000/verify/login');
+      return res.redirect('https://beta.medxbay.com/verify/login');
       // return res.redirect('https://beta.medxbay.com/');
     }
 
@@ -164,11 +164,11 @@ router.get('/verify-email', async (req, res) => {
     user.verificationToken = undefined;
     await user.save();
 
-    return res.redirect('http://localhost:3000');
+    return res.redirect('https://beta.medxbay.com');
     // return res.redirect('https://beta.medxbay.com/');
   } catch (err) {
     console.error('Error in email verification:', err);
-    return res.redirect('http://localhost:3000');
+    return res.redirect('https://beta.medxbay.com');
     // return res.redirect('https://beta.medxbay.com/');
   }
 });
@@ -373,7 +373,7 @@ router.post('/forgot-password', async (req, res) => {
 
     await user.save();
 
-    const resetUrl = `http://localhost:3000/reset-password?token=${resetToken}`;
+    const resetUrl = `https://beta.medxbay.com/reset-password?token=${resetToken}`;
     await sendResetPasswordEmail(user.email, resetUrl);
 
     return res.json({ success: true, message: 'A password reset link has been sent to your email.' });
