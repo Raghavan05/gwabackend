@@ -411,7 +411,7 @@ router.post('/forgot-password', async (req, res) => {
     await user.save();
 
 
-    const resetUrl = `${process.env.NODE_URL}/reset-password?token=${resetToken}`;
+    const resetUrl = `${process.env.REACT_URL}/reset-password?token=${resetToken}`;
 
     // const resetUrl = `http://localhost:8000/reset-password?token=${resetToken}`;
 
