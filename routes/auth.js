@@ -57,7 +57,10 @@ const sendVerificationEmail = async (name, email, token, role) => {
     }
   });
 
-  const verificationLink = `https://beta.medxbay.com/api/auth/verify-email?token=${token}&role=${role}`;
+
+
+  const verificationLink = `${process.env.NODE_URL}/verify-email?token=${token}&role=${role}`;
+
 
   const mailOptions = {
     from: process.env.EMAIL_USER,
@@ -182,12 +185,12 @@ router.get('/verify-email', async (req, res) => {
 
       if (!user) {
           console.log(`User not found with token: ${token} and role: ${role}`);
-          return res.redirect('https://beta.medxbay.com/');
+          return res.redirect(`${process.env.REACT_URL}`);
       }
 
       if (user.isVerified) {
           console.log(`User with token: ${token} is already verified.`);
-          return res.redirect('https://beta.medxbay.com/');
+          return res.redirect(`${process.env.REACT_URL}`);
       }
 
       user.isVerified = true;
@@ -196,10 +199,10 @@ router.get('/verify-email', async (req, res) => {
 
       console.log(`User verified successfully: ${user._id}`);
 
-      return res.redirect('https://beta.medxbay.com/verify/login');
+      return res.redirect(`${process.env.REACT_URL}/verify/login`);
   } catch (err) {
       console.error('Error in email verification:', err);
-      return res.redirect('https://beta.medxbay.com/');
+      return res.redirect(`${process.env.REACT_URL}`);
   }
 });
 
@@ -308,11 +311,10 @@ router.get('/google/callback', async (req, res) => {
       req.session.user = existingUser;
       const userRole = existingUser.role;
       res.redirect(userRole === 'doctor'
-        // ? 'http://localhost:3000/Doctor/profile/Edit'
-        // : 'http://localhost:3000/profile/userprofile');
+ 
 
-        ? 'https://beta.medxbay.com/Doctor/profile/Edit'
-        : 'https://beta.medxbay.com/profile/userprofile');
+        ? `${process.env.REACT_URL}/Doctor/profile/Edit`
+        : `${process.env.REACT_URL}/profile/userprofile`);
     } else {
       const role = JSON.parse(state).role;
 
@@ -339,12 +341,11 @@ router.get('/google/callback', async (req, res) => {
 
       req.session.user = newUser;
       res.redirect(role === 'doctor'
-        ? 'https://beta.medxbay.com/Doctor/profile/Edit'
-        : 'https://beta.medxbay.com/profile/userprofile');
+        ? `${process.env.REACT_URL}/Doctor/profile/Edit`
+        : `${process.env.REACT_URL}/profile/userprofile`);
 
 
-        // ? 'http://localhost:3000/Doctor/profile/Edit'
-        // : 'http://localhost:3000/profile/userprofile');
+     
     }
   } catch (err) {
     console.error('Error in Google OAuth callback:', err);
@@ -409,7 +410,8 @@ router.post('/forgot-password', async (req, res) => {
 
     await user.save();
 
-    const resetUrl = `https://beta.medxbay.com/api/auth/reset-password?token=${resetToken}`;
+
+    const resetUrl = `${process.env.NODE_URL}/reset-password?token=${resetToken}`;
 
     // const resetUrl = `http://localhost:8000/reset-password?token=${resetToken}`;
 
@@ -533,6 +535,7 @@ router.post('/reset-password', async (req, res) => {
     return res.status(500).json({ success: false, message: 'Server error' });
   }
 });
+
 
 
 module.exports = router;

@@ -23,7 +23,8 @@ console.log('EMAIL_USER:', process.env.EMAIL_USER);
 console.log('EMAIL_PASSWORD:', process.env.EMAIL_PASSWORD);
 
 
-const upload = multer({ dest: 'uploads/' });
+const storage = multer.memoryStorage();
+const upload = multer({ storage: storage });
 
 
 router.use(methodOverride('_method'));
@@ -442,7 +443,7 @@ router.get('/reviews/:doctorId', isLoggedIn, async (req, res) => {
     try {
         const doctorId = req.params.doctorId;
         if (!doctorId) {
-            return res.status(400).send('Doctor ID is required');
+            return res.status(400).json({ error: 'Doctor ID is required' });
         }
 
         const doctor = await Doctor.findById(doctorId)
@@ -452,17 +453,21 @@ router.get('/reviews/:doctorId', isLoggedIn, async (req, res) => {
             });
 
         if (!doctor) {
-            return res.status(404).send('Doctor not found');
+            return res.status(404).json({ error: 'Doctor not found' });
         }
 
-        const reviews = doctor.reviews;
+        const reviews = doctor.reviews.map(review => ({
+            ...review.toObject(),
+            patientName: review.patientId ? review.patientId.name : 'Unknown'
+        }));
 
-        res.render('doctorReviews', { reviews, doctor });
+        res.json({ reviews, doctor });
     } catch (error) {
         console.error(error.message);
-        res.status(500).send('Server Error');
+        res.status(500).json({ error: 'Server Error' });
     }
 });
+
 
 
 router.get('/bookings/:id/prescription', isLoggedIn, checkSubscription, async (req, res) => {
