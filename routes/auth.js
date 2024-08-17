@@ -59,7 +59,7 @@ const sendVerificationEmail = async (name, email, token, role) => {
 
 
 
-  const verificationLink = `${process.env.NODE_URL}/verify-email?token=${token}&role=${role}`;
+  const verificationLink = `${process.env.NODE_URL}/auth/verify-email?token=${token}&role=${role}`;
 
 
   const mailOptions = {
