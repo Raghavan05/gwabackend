@@ -113,6 +113,7 @@ router.post('/profile/update', upload.single('profilePicture'), isLoggedIn, asyn
   }
 });
 
+
 router.get('/doctors', async (req, res) => {
   try {
     const sortOption = req.query.sort;
@@ -132,30 +133,44 @@ router.get('/doctors', async (req, res) => {
         sortCriteria = {};
     }
 
+    // Fetch doctors including their time slots
     const doctors = await Doctor.find({ verified: 'Verified' })
       .populate({
         path: 'hospitals',
-        select: 'name city -_id'
+        select: 'name city lat lng -_id'
       })
       .sort(sortCriteria);
 
+    // Extract unique free time slot locations
+    const locationSet = new Set();
+
+    doctors.forEach(doctor => {
+      doctor.timeSlots.forEach(slot => {
+        if (slot.status === 'free' && slot.lat && slot.lng) {
+          const key = `${slot.lat},${slot.lng}`;
+          if (!locationSet.has(key)) {
+            locationSet.add(key);
+          }
+        }
+      });
+    });
+
+    // Convert set to array
+    const uniqueLocations = Array.from(locationSet).map(key => {
+      const [lat, lng] = key.split(',').map(Number);
+      return { lat, lng };
+    });
+
+    // Fetch other data for rendering
     const countries = await Doctor.distinct('country');
     const states = await Doctor.distinct('state');
-    const cities = await Doctor.distinct('city');
+    const hospitals = doctors.flatMap(doctor => doctor.hospitals);
+    const cities = Array.from(new Set(hospitals.map(hospital => hospital.city)))
+      .filter(city => city !== undefined);
     const specialities = await Doctor.distinct('speciality');
     const languages = await Doctor.distinct('languages');
     const genders = await Doctor.distinct('gender');
-    const hospital = await Doctor.distinct('hospital');
 
-    // res.render('patientDoctors', {
-    //   doctors,
-    //   countries,
-    //   states,
-    //   cities,
-    //   specialities,
-    //   languages,
-    //   genders
-    // });
     res.json({
       doctors,
       countries,
@@ -164,13 +179,14 @@ router.get('/doctors', async (req, res) => {
       specialities,
       languages,
       genders,
-      hospital
+      uniqueLocations // Include unique locations in the response
     });
   } catch (err) {
     console.error(err.message);
-    res.status(500).json({ error: 'Server Error' });
+    res.status(500).send('Server Error');
   }
 });
+
 router.get('/doctors/:id/slots', async (req, res) => {
   try {
       const doctorId = req.params.id;

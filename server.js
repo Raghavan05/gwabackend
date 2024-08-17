@@ -129,7 +129,6 @@ app.use((err, req, res, next) => {
   console.error('Error:', err.stack);
   res.status(500).send('Something broke!');
 });
-
 app.get('/auth/search-doctors', async (req, res) => {
   const { what, where, country, state, city, speciality, conditions, languages, gender, availability, dateAvailability, consultation } = req.query;
 
@@ -193,49 +192,26 @@ app.get('/auth/search-doctors', async (req, res) => {
     ];
 
     const doctors = await Doctor.aggregate(pipeline);
+    // console.log(doctors)
     res.json(doctors);
   } catch (error) {
     res.status(500).json({ message: 'Error fetching doctors', error });
   }
 });
 
-
-app.get('/doctor/profile', async (req, res) => {
-  try {
-    if (!req.session || !req.session.doctorId) {
-      return res.status(401).json({ message: 'Not authenticated' });
-    }
-
-    const doctor = await Doctor.findById(req.session.doctorId);
-    if (!doctor) {
-      return res.status(404).json({ message: 'Doctor not found' });
-    }
-
-
-    res.json({
-      email: doctor.email,
-      name: doctor.name,
-      title: doctor.title,
-      about: doctor.about,
-      dob: doctor.dob,
- 
-    });
-  } catch (error) {
-    console.error('Error fetching doctor profile:', error);
-    res.status(500).json({ message: 'Server error' });
-  }
-});
-
-
-
 app.get('/auth/countries', async (req, res) => {
   try {
     const countries = await Doctor.aggregate([
       { $match: { role: 'doctor', verified: 'Verified', 'timeSlots.status': 'free' } },
-      { $group: { _id: '$timeSlots.hospitalLocation.country' } },
-      { $project: { _id: 0, country: '$_id' } }
+      { $unwind: '$timeSlots' }, // Unwind timeSlots to access individual records
+      { $group: { _id: '$timeSlots.hospitalLocation.country' } }, // Group by country to remove duplicates
+      { $sort: { _id: 1 } }, // Optional: Sort countries alphabetically
+      { $project: { _id: 0, country: '$_id' } } // Project the country field
     ]);
+
+    // Convert the results to an array of country names
     const countryList = countries.map(country => country.country);
+    
     res.json(countryList);
   } catch (error) {
     res.status(500).json({ message: 'Error fetching countries', error });
@@ -247,7 +223,10 @@ app.get('/auth/states', async (req, res) => {
   try {
     const states = await Doctor.aggregate([
       { $match: { role: 'doctor', verified: 'Verified', 'timeSlots.status': 'free' } },
-      { $group: { _id: '$timeSlots.hospitalLocation.state' } },
+      { $unwind: '$timeSlots' },
+      { $match: {'timeSlots.status': 'free'} },
+      { $group: { _id:  '$timeSlots.hospitalLocation.state' } },
+      { $sort: { _id: 1}},
       { $project: { _id: 0, state: '$_id' } }
     ]);
     const stateList = states.map(state => state.state);
@@ -262,16 +241,22 @@ app.get('/auth/cities', async (req, res) => {
   try {
     const cities = await Doctor.aggregate([
       { $match: { role: 'doctor', verified: 'Verified', 'timeSlots.status': 'free' } },
-      { $group: { _id: '$timeSlots.hospitalLocation.city' } },
-      { $project: { _id: 0, city: '$_id' } }
+      { $unwind: '$timeSlots' }, // Unwind the timeSlots array to work with individual documents
+      { $match: { 'timeSlots.status': 'free' } }, // Match only documents with free time slots
+      { $group: { _id: '$timeSlots.hospitalLocation.city' } }, // Group by city to remove duplicates
+      { $sort: { _id: 1 } }, // Optionally sort by city name
+      { $project: { _id: 0, city: '$_id' } } // Project the city field
     ]);
+
+    // Convert the results to an array of city names
     const cityList = cities.map(city => city.city);
+    console.log(cityList);
+    
     res.json(cityList);
   } catch (error) {
     res.status(500).json({ message: 'Error fetching cities', error });
   }
 });
-
 
 app.get('/auth/hospitals', async (req, res) => {
   try {
@@ -344,7 +329,6 @@ app.get('/auth/where-options', async (req, res) => {
     const statesFromHospitals = await Doctor.distinct('hospitals.state');
     const countriesFromHospitals = await Doctor.distinct('hospitals.country');
 
-    // Combine and make unique
     const cities = [...new Set([...citiesFromTimeSlots, ...citiesFromHospitals])];
     const states = [...new Set([...statesFromTimeSlots, ...statesFromHospitals])];
     const countries = [...new Set([...countriesFromTimeSlots, ...countriesFromHospitals])];
@@ -358,7 +342,6 @@ app.get('/auth/where-options', async (req, res) => {
     res.status(500).json({ message: 'Error fetching where options', error });
   }
 });
-
 
 
 app.post('/submit-lead', async (req, res) => {
