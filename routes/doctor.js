@@ -601,23 +601,29 @@ router.get('/manage-time-slots', isLoggedIn, checkSubscription, async (req, res)
             status: 'accepted'
         });
 
-        res.render('manageTimeSlots', {
+        const data = {
             doctor,
             currentMonth,
             currentYear,
             daysInMonth,
             timeSlots: doctor.timeSlots,
-            bookings, 
+            bookings,
             months: [
                 'January', 'February', 'March', 'April', 'May', 'June',
                 'July', 'August', 'September', 'October', 'November', 'December'
             ]
-        });
+        };
+        if (req.headers.accept && req.headers.accept.includes('application/json')) {
+            res.json(data);
+        } else {
+            res.render('manageTimeSlots', data);
+        }
     } catch (err) {
         console.error(err.message);
         res.status(500).send('Server Error');
     }
 });
+
 
 router.delete('/manage-time-slots/:index', isLoggedIn, checkSubscription, async (req, res) => {
     try {
@@ -642,8 +648,10 @@ router.delete('/manage-time-slots/:index', isLoggedIn, checkSubscription, async 
 
 router.post('/add-time-slot', isLoggedIn, checkSubscription, async (req, res) => {
     try {
+        console.log('Request Body:', req.body);
+
         const doctorEmail = req.session.user.email;
-        const { date, startTime, endTime, hospital } = req.body;
+        const { date, startTime, endTime, hospital, slotType, endDate } = req.body;
 
         const doctor = await Doctor.findOne({ email: doctorEmail });
         if (!doctor) {
@@ -656,22 +664,31 @@ router.post('/add-time-slot', isLoggedIn, checkSubscription, async (req, res) =>
             return res.status(404).send('Hospital not found');
         }
 
-        const newTimeSlot = {
-            date: new Date(date),
-            startTime,
-            endTime,
-            status: 'free',
-            hospital: hospital,
-            hospitalLocation: {
-                street: selectedHospital.street,
-                city: selectedHospital.city,
-                state: selectedHospital.state,
-                country: selectedHospital.country,
-                zip: selectedHospital.zip
-            }
-        };
+        const start = new Date(date);
+        const end = new Date(endDate || date); 
 
-        doctor.timeSlots.push(newTimeSlot);
+        let currentDate = new Date(start);
+
+        while (currentDate <= end) {
+            const newTimeSlot = {
+                date: new Date(currentDate),
+                startTime,
+                endTime,
+                status: 'free',
+                hospital: hospital,
+                hospitalLocation: {
+                    street: selectedHospital.street,
+                    city: selectedHospital.city,
+                    state: selectedHospital.state,
+                    country: selectedHospital.country,
+                    zip: selectedHospital.zip
+                }
+            };
+
+            doctor.timeSlots.push(newTimeSlot);
+            currentDate.setDate(currentDate.getDate() + 1); 
+        }
+
         await doctor.save();
 
         res.redirect('/doctor/manage-time-slots');
@@ -681,7 +698,7 @@ router.post('/add-time-slot', isLoggedIn, checkSubscription, async (req, res) =>
     }
 });
 
-
+    
 async function createGoogleMeetLink(booking) {
     const oauth2Client = new google.auth.OAuth2(
         process.env.GOOGLE_CLIENT_ID,
@@ -918,30 +935,42 @@ router.get('/subscription-failure', (req, res) => {
 
 
 router.get('/blog', (req, res) => {
-    res.render('blog-upload-form'); 
+    res.json('blog-upload-form'); 
 });
-
 router.post('/blog', isLoggedIn, checkSubscription, upload.single('image'), async (req, res) => {
     try {
         const authorEmail = req.session.user.email;
-        const { title, author, description, summary, categories, hashtags, priority } = req.body;
+        const { title, author, description, categories, hashtags, priority } = req.body;
 
         const doctor = await Doctor.findOne({ email: authorEmail });
 
+        const hashtagsArray = hashtags ? hashtags.split(',').map(tag => tag.trim()) : [];
+
         let authorId = null;
+        let authorTitle = '';
+        let profilePicture = null;
+        
         if (doctor) {
             authorId = doctor._id; 
+            authorTitle = doctor.title;
+            aboutMe=doctor.aboutMe;
+            profilePicture = {
+                data: doctor.profilePicture.data, 
+                contentType: doctor.profilePicture.contentType
+            };
         }
 
         const newBlog = new Blog({
             title,
             author,
             description,
-            summary,
             authorEmail,
             authorId, 
+            authorTitle,
+            aboutMe,
+            profilePicture,
             categories: categories, 
-            hashtags: hashtags, 
+            hashtags: hashtagsArray, 
             priority,
             image: {
                 data: req.file.buffer,
@@ -952,12 +981,98 @@ router.post('/blog', isLoggedIn, checkSubscription, upload.single('image'), asyn
 
         await newBlog.save();
 
-        res.render('blog-success', { message: 'Blog uploaded successfully' });
+        res.json('blog-success', { message: 'Blog uploaded successfully' });
     } catch (err) {
         console.error(err);
-        res.status(500).json({ message: 'Server error' });
+        res.status(500).json({ message: 'Server error' });
+    }
+    })
+
+
+
+router.get('/blogs', isDoctor, isLoggedIn, async (req, res) => {
+    try {
+        let filter = { verificationStatus: 'Verified' };
+
+        if (req.query.search) {
+            const regex = new RegExp(escapeRegex(req.query.search), 'gi');
+
+            filter = {
+                verificationStatus: 'Verified',
+                $or: [
+                    { title: regex },
+                    { categories: regex },
+                    { hashtags: regex }
+                ]
+            };
+        }
+
+        // Retrieve distinct categories and hashtags
+        const categories = await Blog.distinct('categories', { verificationStatus: 'Verified' });
+        const hashtags = await Blog.distinct('hashtags', { verificationStatus: 'Verified' });
+
+        // Count the number of blogs in each category
+        const categoryCountMap = await Blog.aggregate([
+            { $match: { verificationStatus: 'Verified' } },
+            { $unwind: '$categories' },
+            { $group: { _id: '$categories', count: { $sum: 1 } } },
+            { $project: { _id: 1, count: 1 } }
+        ]).exec();
+
+        const categoryCountMapObj = categoryCountMap.reduce((acc, curr) => {
+            acc[curr._id] = curr.count;
+            return acc;
+        }, {});
+
+        // Count the number of blogs in each hashtag
+        const hashtagCountMap = await Blog.aggregate([
+            { $match: { verificationStatus: 'Verified' } },
+            { $unwind: '$hashtags' },
+            { $group: { _id: '$hashtags', count: { $sum: 1 } } },
+            { $project: { _id: 1, count: 1 } }
+        ]).exec();
+
+        const hashtagCountMapObj = hashtagCountMap.reduce((acc, curr) => {
+            acc[curr._id] = curr.count;
+            return acc;
+        }, {});
+
+        // Find blogs based on the filter
+        const verifiedBlogs = await Blog.find(filter).lean();
+
+        // Fetch most read blogs
+        const mostReadBlogs = await Blog.find({ verificationStatus: 'Verified' })
+            .sort({ readCount: -1 })
+            .limit(5)
+            .lean();
+
+        // Fetch related posts based on categories (exclude current category)
+        const relatedPosts = await Blog.find({
+            verificationStatus: 'Verified',
+            categories: { $in: categories }
+        })
+        .limit(5)
+        .lean();
+
+        res.json({ 
+            blogs: verifiedBlogs, 
+            searchQuery: req.query.search,
+            categories,
+            hashtags,
+            categoryCountMap: categoryCountMapObj, // Pass category counts to template
+            hashtagCountMap: hashtagCountMapObj, // Pass hashtag counts to template
+            filterType: 'All', // Default filter type
+            filterValue: '', // Default filter value
+            mostReadBlogs, // Add most read blogs
+            relatedPosts // Add related posts
+        });
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).send('Server Error');
     }
 });
+
+
 
 
 
@@ -967,7 +1082,7 @@ router.get('/profile/blogs', isLoggedIn, async (req, res) => {
   
       const blogs = await Blog.find({ authorEmail: doctorEmail });
   
-      res.render('profile-blogs', { blogs });
+      res.json({ blogs });
     } catch (err) {
       console.error(err.message);
       res.status(500).send('Server Error');
@@ -1178,7 +1293,7 @@ router.get('/blogs/view/:id', isLoggedIn, checkSubscription,async (req, res) => 
     }
   });
   
-router.post('/blogs/comment/:id', isLoggedIn, async (req, res) => {
+  router.post('/blogs/comment/:id', isLoggedIn, async (req, res) => {
     try {
         const { comment } = req.body;
         const blogId = req.params.id;
@@ -1187,21 +1302,27 @@ router.post('/blogs/comment/:id', isLoggedIn, async (req, res) => {
         if (!blog) {
             return res.status(404).send('Blog not found');
         }
-        console.log(req.session.user.name)
+
+        const user = req.session.user;
+
         blog.comments.push({
-            username: req.session.user.name, 
-            comment: comment
+            username: user.name,
+            comment: comment,
+            profilePicture: {
+                data: user.profilePicture.data, 
+                contentType: user.profilePicture.contentType
+            }
         });
   
         await blog.save();
   
-        req.flash('success_msg', 'Comment added successfully');
-        res.redirect(`/doctor/blogs/view/${blogId}`);
+        res.render('blog-success', { message: 'Blog uploaded successfully' });
+        // res.redirect(/doctor/blogs/view/${blogId});
     } catch (err) {
         console.error(err.message);
         res.status(500).send('Server Error');
-    }
-  });
+    }
+});
   
   router.get('/author/:id', async (req, res) => {
     try {

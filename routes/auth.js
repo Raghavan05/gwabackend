@@ -169,6 +169,39 @@ router.post('/signup/doctor', async (req, res) => {
     return res.status(500).json({ error: 'Server error' });
   }
 });
+
+const sendWelcomeEmail = async (name, email, role) => {
+  const transporter = nodemailer.createTransport({
+      service: 'gmail',
+      auth: {
+          user: process.env.EMAIL_USER,
+          pass: process.env.EMAIL_PASSWORD
+      }
+  });
+
+  const mailOptions = {
+      from: process.env.EMAIL_USER,
+      to: email,
+      subject: '🎉 Welcome to MedXBay! 🎉',
+      html: `
+          <p>Hi ${name},</p>
+
+          <p>Congratulations! Your email has been successfully verified, and we are delighted to welcome you to the MedXBay family!</p>
+
+          <p>Now that you're all set, you can start exploring our platform. Whether you're a user looking for top-notch medical care or a provider ready to offer your expertise, we are here to support you every step of the way.</p>
+
+          <p>If you have any questions, our support team is always here to help. We're excited to see you thrive on MedXBay!</p>
+
+          <p>Welcome aboard!</p>
+
+          <p>Best regards,</p>
+          <p>The MedXBay Team</p>
+      `
+  };
+
+  await transporter.sendMail(mailOptions);
+};
+
 router.get('/verify-email', async (req, res) => {
   const { token, role } = req.query;
 
@@ -198,6 +231,8 @@ router.get('/verify-email', async (req, res) => {
       await user.save();
 
       console.log(`User verified successfully: ${user._id}`);
+
+      await sendWelcomeEmail(user.name, user.email, role);
 
       return res.redirect(`${process.env.REACT_URL}/verify/login`);
   } catch (err) {
@@ -285,10 +320,8 @@ router.get('/google', (req, res) => {
   });
   res.redirect(url);
 });
-
 router.get('/google/callback', async (req, res) => {
   const { code, state } = req.query;
-  const redirectUri = 'http://localhost:3000/'; 
 
   try {
     const { tokens } = await oauth2Client.getToken(code);
@@ -303,18 +336,18 @@ router.get('/google/callback', async (req, res) => {
     const { name, email } = data;
 
     let existingUser = await Patient.findOne({ email })
-                       || await Doctor.findOne({ email })
-                       || await Admin.findOne({ email });
+                      || await Doctor.findOne({ email })
+                      || await Admin.findOne({ email });
 
     let newUser;
     if (existingUser) {
       req.session.user = existingUser;
       const userRole = existingUser.role;
-      res.redirect(userRole === 'doctor'
- 
-
-        ? `${process.env.REACT_URL}/Doctor/profile/Edit`
-        : `${process.env.REACT_URL}/profile/userprofile`);
+      const userId = existingUser._id;
+      const redirectUrl = userRole === 'doctor'
+        ? `${process.env.REACT_URL}/doctorprofile/dashboardpage/start-dashboard?role=${userRole}&name=${name}&id=${userId}`
+        : `${process.env.REACT_URL}/profile/userprofile?role=${userRole}&name=${name}&id=${userId}`;
+      res.redirect(redirectUrl);
     } else {
       const role = JSON.parse(state).role;
 
@@ -340,18 +373,18 @@ router.get('/google/callback', async (req, res) => {
       await newUser.save();
 
       req.session.user = newUser;
-      res.redirect(role === 'doctor'
-        ? `${process.env.REACT_URL}/Doctor/profile/Edit`
-        : `${process.env.REACT_URL}/profile/userprofile`);
-
-
-     
+      const userId = newUser._id;
+      const redirectUrl = role === 'doctor'
+        ? `${process.env.REACT_URL}/doctorprofile/dashboardpage/start-dashboard?role=${role}&name=${name}&id=${userId}`
+        : `${process.env.REACT_URL}/profile/userprofile?role=${role}&name=${name}&id=${userId}`;
+      res.redirect(redirectUrl);
     }
   } catch (err) {
     console.error('Error in Google OAuth callback:', err);
     res.status(500).json({ success: false, message: 'Authentication failed. Please try again.' });
   }
 });
+
 
 
 
