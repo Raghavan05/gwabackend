@@ -1185,44 +1185,50 @@ router.get('/dashboard', isLoggedIn, checkSubscription, async (req, res) => {
     }
 });
 
-
 router.post('/chats/:chatId/send-message', isLoggedIn, async (req, res) => {
     try {
-        const { message } = req.body;
-        const doctor = await Doctor.findOne({ email: req.session.user.email });
-        const chatId = req.params.chatId;
-
-        if (!doctor) {
-            return res.status(404).send('Doctor not found');
-        }
-
-        let chat = await Chat.findOneAndUpdate(
-            { _id: chatId, doctorId: doctor._id },
-            { $push: { messages: { senderId: doctor._id, text: message, timestamp: new Date(), read: false } } },
-            { new: true }
-        );
-
-        const patient = await Patient.findById(chat.patientId);
-
-        if (patient) {
-            await Notification.create({
-                userId: patient._id,
-                message: `New message from Dr. ${doctor.name}: ${message}`, 
-                type: 'chat',
-                chatId: chat._id, 
-                read: false,
-                createdAt: new Date()
-            });
-        }
-
-        res.redirect(`/doctor/chat/${chat._id}`);
-
+      const { message } = req.body;
+      const doctor = await Doctor.findOne({ email: req.session.user.email });
+      const chatId = req.params.chatId;
+  
+      if (!doctor) {
+        return res.status(404).send('Doctor not found');
+      }
+  
+      let chat = await Chat.findOneAndUpdate(
+        { _id: chatId, doctorId: doctor._id },
+        { $push: { messages: { senderId: doctor._id, text: message, timestamp: new Date(), read: false } } },
+        { new: true }
+      );
+  
+      if (!chat) {
+        return res.status(404).send('Chat not found');
+      }
+  
+      console.log("Chat ID:", chat._id); 
+  
+      const patient = await Patient.findById(chat.patientId);
+  
+      if (patient) {
+        await Notification.create({
+          userId: patient._id,
+          message: `New message from Dr. ${doctor.name}: ${message}`,
+          type: 'chat',
+          chatId: chat._id, 
+          read: false,
+          createdAt: new Date()
+        });
+  
+        console.log("Notification created with chat ID:", chat._id);
+      }
+  
+      res.redirect(`/doctor/chat/${chat._id}`);
+  
     } catch (error) {
-        console.error(error.message);
-        res.status(500).send('Server Error');
+      console.error("Error:", error.message);
+      res.status(500).send('Server Error');
     }
-});
-
+  });
 
 router.get('/chat/:id', isLoggedIn, checkSubscription, async (req, res) => {
     try {

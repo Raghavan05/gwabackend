@@ -607,11 +607,16 @@ router.post('/chats/:chatId/send-message', isLoggedIn, async (req, res) => {
       { new: true }
     ).populate('doctorId');
 
+    if (!chat) {
+      return res.status(404).send('Chat not found');
+    }
+
     if (chat.doctorId) {
       await Notification.create({
         userId: chat.doctorId._id,
-        message: `New message from ${patient.name}`,
+        message: `New message from ${patient.name}: ${message}`, 
         type: 'chat',
+        chatId: chat._id,
         read: false,
         createdAt: new Date()
       });
@@ -623,6 +628,8 @@ router.post('/chats/:chatId/send-message', isLoggedIn, async (req, res) => {
     return res.status(500).json({ error: 'Server Error' });
   }
 });
+
+
 
 router.get('/prescriptions', isLoggedIn, async (req, res) => {
   try {
