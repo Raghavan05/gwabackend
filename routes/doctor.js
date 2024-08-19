@@ -1304,19 +1304,20 @@ router.get('/blogs/view/:id', isLoggedIn, checkSubscription,async (req, res) => 
         const { comment } = req.body;
         const blogId = req.params.id;
         const blog = await Blog.findById(blogId);
+        const authorEmail = req.session.user.email;
+        const doctor = await Doctor.findOne({ email: authorEmail });
   
         if (!blog) {
             return res.status(404).send('Blog not found');
         }
 
-        const user = req.session.user;
 
         blog.comments.push({
-            username: user.name,
+            username: doctor.name,
             comment: comment,
             profilePicture: {
-                data: user.profilePicture.data, 
-                contentType: user.profilePicture.contentType
+                data: doctor.profilePicture.data, 
+                contentType: doctor.profilePicture.contentType
             }
         });
   
@@ -1329,7 +1330,7 @@ router.get('/blogs/view/:id', isLoggedIn, checkSubscription,async (req, res) => 
         res.status(500).send('Server Error');
     }
 });
-  
+
   router.get('/author/:id', async (req, res) => {
     try {
       const authorId = req.params.id;

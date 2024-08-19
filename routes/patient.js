@@ -505,31 +505,102 @@ router.get('/priority-blogs', async (req, res) => {
     }
   });
 
-router.get('/blogs', async (req, res) => {
-  try {
-    let filter = { verificationStatus: 'Verified' }; 
+  router.get('/blogs', async (req, res) => {
+    try {
+        const { search } = req.query;
+        let filter = { verificationStatus: 'Verified' };
 
-    if (req.query.search) {
-      const regex = new RegExp(escapeRegex(req.query.search), 'gi'); 
+        // Create a regex for search functionality
+        if (search) {
+            const regex = new RegExp(escapeRegex(search), 'gi');
+            filter = {
+                verificationStatus: 'Verified',
+                $or: [
+                    { title: regex },
+                    { categories: regex },
+                    { hashtags: regex }
+                ]
+            };
+        }
 
-      filter = {
-        verificationStatus: 'Verified',
-        $or: [
-          { title: regex },
-          { categories: regex },
-          { hashtags: regex }
-        ]
-      };
+        // Retrieve distinct categories and hashtags
+        const categories = await Blog.distinct('categories', { verificationStatus: 'Verified' });
+        // Retrieve unique hashtags and remove the '#' symbol
+        let hashtags = await Blog.distinct('hashtags', { verificationStatus: 'Verified' });
+        hashtags = hashtags.map(hashtag => hashtag.replace('#', ''));
+
+        // Count the number of blogs per category
+        const categoryCounts = await Blog.aggregate([
+            { $match: { verificationStatus: 'Verified' } },
+            { $unwind: '$categories' },
+            { $group: { _id: '$categories', count: { $sum: 1 } } }
+        ]);
+
+        // Count the number of blogs per hashtag
+        const hashtagCounts = await Blog.aggregate([
+            { $match: { verificationStatus: 'Verified' } },
+            { $unwind: '$hashtags' },
+            { $group: { _id: '$hashtags', count: { $sum: 1 } } }
+        ]);
+
+        // Convert aggregate results to a more usable format
+        const categoryCountMap = categoryCounts.reduce((map, item) => {
+            map[item._id] = item.count;
+            return map;
+        }, {});
+
+        const hashtagCountMap = hashtagCounts.reduce((map, item) => {
+            const cleanHashtag = item._id.replace('#', ''); // Clean the hashtag
+            map[cleanHashtag] = item.count;
+            return map;
+        }, {});
+
+        // Find high-priority blogs (featured blogs)
+        const featuredBlogs = await Blog.find({ 
+            priority: 'active', 
+            verificationStatus: 'Verified' 
+        }).sort({ createdAt: -1 }).limit(5).lean();
+
+        // Find recent blogs
+        const recentBlogs = await Blog.find(filter).sort({ createdAt: -1 }).limit(5).lean();
+
+        // Group blogs by categories
+        const blogsByCategory = {};
+        for (const category of categories) {
+            blogsByCategory[category] = await Blog.find({ 
+                categories: category, 
+                verificationStatus: 'Verified' 
+            }).sort({ createdAt: -1 }).lean();
+        }
+
+        // Find most-read blogs
+        const mostReadBlogs = await Blog.find(filter).sort({ reads: -1 }).limit(5).lean(); // Assuming 'reads' tracks the number of views
+
+        // Find top-rated doctors
+        const topRatedDoctors = await Doctor.find({ 
+            rating: { $gte: 4.5 }, // Assuming rating is out of 5
+            subscriptionVerification: 'Verified' 
+        }).sort({ rating: -1 }).limit(5).lean();
+
+        console.log(topRatedDoctors);
+        // Render the view with blogs, categories, hashtags, top-rated doctors, and additional sections
+        res.json({ 
+            featuredBlogs,
+            recentBlogs,
+            blogsByCategory,
+            mostReadBlogs,
+            topRatedDoctors,
+            searchQuery: search,
+            categories,
+            hashtags,
+            categoryCounts: categoryCountMap,
+            hashtagCounts: hashtagCountMap
+        });
+
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).send('Server Error');
     }
-
-    const verifiedBlogs = await Blog.find(filter).lean();
-
-    res.render('blogs', { blogs: verifiedBlogs, searchQuery: req.query.search });
-
-  } catch (err) {
-    console.error(err.message);
-    res.status(500).send('Server Error');
-  }
 });
 
 function escapeRegex(text) {
