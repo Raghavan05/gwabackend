@@ -1514,6 +1514,92 @@ router.get('/blogs', async (req, res) => {
       res.status(500).json({ error: 'Server Error' });
     }
   });
-  
+
+  router.get('/insights', isLoggedIn, async (req, res) => {
+    try {
+        const doctorEmail = req.session.user.email;
+        const doctor = await Doctor.findOne({ email: doctorEmail });
+
+        if (!doctor) {
+            return res.status(404).json({ message: 'Doctor not found' });
+        }
+
+        const totalPatients = await Patient.countDocuments();
+        const totalConsultations = await Booking.countDocuments({ doctor: doctor._id, status: 'completed' });
+        const totalReviews = doctor.reviews.length;
+
+        const totalRatings = doctor.reviews.reduce((acc, review) => acc + review.rating, 0);
+        const averageRating = totalReviews > 0 ? (totalRatings / totalReviews).toFixed(1) : 'No ratings';
+
+        const bookingFilter = req.query['booking-filter'] || 'all';
+        const insightsFilter = req.query['insight-filter'] || 'all';
+
+        let startDate, endDate;
+
+        if (bookingFilter === 'today') {
+            startDate = new Date();
+            startDate.setHours(0, 0, 0, 0); 
+            endDate = new Date();
+            endDate.setHours(23, 59, 59, 999); 
+        } else if (bookingFilter === 'week') {
+            startDate = new Date();
+            startDate.setDate(startDate.getDate() - startDate.getDay());
+            endDate = new Date();
+            endDate.setDate(endDate.getDate() + (6 - endDate.getDay())); 
+        } else if (bookingFilter === 'month') {
+            startDate = new Date();
+            startDate.setDate(1); 
+            endDate = new Date(startDate);
+            endDate.setMonth(endDate.getMonth() + 1);
+            endDate.setDate(0);
+        } else {
+            startDate = new Date('1970-01-01');
+            endDate = new Date();
+        }
+
+        const bookingRates = await Booking.aggregate([
+            { $match: { doctor: doctor._id, date: { $gte: startDate, $lte: endDate } } },
+            {
+                $group: {
+                    _id: { $dayOfWeek: '$date' },
+                    count: { $sum: 1 }
+                }
+            }
+        ]);
+
+        const totalUnreadMessages = await Chat.aggregate([
+            { $match: { doctorId: doctor._id } },
+            { $unwind: '$messages' },
+            { $match: { 'messages.read': false, 'messages.senderId': { $ne: doctor._id } } },
+            { $count: 'unreadCount' }
+        ]);
+
+        const waitingAppointmentsCount = await Booking.countDocuments({
+            doctor: doctor._id,
+            status: 'waiting'
+        });
+
+        const totalPostedSlots = doctor.timeSlots.length;
+        const totalFilledSlots = doctor.timeSlots.filter(slot => slot.status === 'booked').length;
+
+        res.json({
+            doctor,
+            totalPatients,
+            totalConsultations,
+            totalReviews,
+            averageRating,
+            bookingRates,
+            totalUnreadMessages: totalUnreadMessages[0]?.unreadCount || 0,
+            waitingAppointmentsCount,
+            totalPostedSlots,
+            totalFilledSlots,
+            bookingFilter, 
+            insightsFilter
+        });
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).json({ message: 'Server Error' });
+    }
+});
   
   module.exports = router;
