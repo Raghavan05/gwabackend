@@ -569,7 +569,6 @@ router.get('/doctor-view/:id/prescriptions', isLoggedIn, checkSubscription, asyn
         res.status(500).send('Server Error');
     }
 });
-
 router.get('/manage-time-slots', isLoggedIn, checkSubscription, async (req, res) => {
     try {
         const doctorEmail = req.session.user.email;
@@ -625,26 +624,36 @@ router.get('/manage-time-slots', isLoggedIn, checkSubscription, async (req, res)
 });
 
 
-router.delete('/manage-time-slots/:index', isLoggedIn, checkSubscription, async (req, res) => {
+router.delete('/manage-time-slots/:id', isLoggedIn, checkSubscription, async (req, res) => {
     try {
+        console.log('Request Params:', req.params);
+
         const doctorEmail = req.session.user.email;
-        const { index } = req.params;
+        const { id } = req.params;
 
         let doctor = await Doctor.findOne({ email: doctorEmail });
 
         if (!doctor) {
-            return res.status(404).send('Doctor not found');
+            return res.status(404).json({ message: 'Doctor not found' });
         }
 
-        doctor.timeSlots.splice(index, 1); 
+        // Find the slot to be deleted
+        const slotToDelete = doctor.timeSlots.find(slot => slot._id.toString() === id);
+        if (!slotToDelete) {
+            return res.status(404).json({ message: 'Time slot not found' });
+        }
+
+        doctor.timeSlots = doctor.timeSlots.filter(slot => slot._id.toString() !== id);
         await doctor.save();
 
-        res.redirect('/doctor/manage-time-slots');
+        res.status(200).json({ message: 'Time slot deleted', deletedSlot: slotToDelete });
     } catch (error) {
         console.error(error.message);
-        res.status(500).send('Server Error');
+        res.status(500).json({ message: 'Server Error' });
     }
 });
+
+
 
 router.post('/add-time-slot', isLoggedIn, checkSubscription, async (req, res) => {
     try {
@@ -655,17 +664,19 @@ router.post('/add-time-slot', isLoggedIn, checkSubscription, async (req, res) =>
 
         const doctor = await Doctor.findOne({ email: doctorEmail });
         if (!doctor) {
-            return res.status(404).send('Doctor not found');
+            return res.status(404).json({ message: 'Doctor not found' });
         }
 
         const selectedHospital = doctor.hospitals.find(h => h.name === hospital);
 
         if (!selectedHospital) {
-            return res.status(404).send('Hospital not found');
+            return res.status(404).json({ message: 'Hospital not found' });
         }
 
+        console.log('Selected Hospital:', selectedHospital);
+
         const start = new Date(date);
-        const end = new Date(endDate || date); 
+        const end = new Date(endDate || date);
 
         let currentDate = new Date(start);
 
@@ -685,16 +696,18 @@ router.post('/add-time-slot', isLoggedIn, checkSubscription, async (req, res) =>
                 }
             };
 
+            console.log('New Time Slot:', newTimeSlot);
+
             doctor.timeSlots.push(newTimeSlot);
-            currentDate.setDate(currentDate.getDate() + 1); 
+            currentDate.setDate(currentDate.getDate() + 1);
         }
 
         await doctor.save();
 
-        res.redirect('/doctor/manage-time-slots');
+        res.status(200).json({ message: 'Time slots added successfully' });
     } catch (error) {
-        console.error(error.message);
-        res.status(500).send('Server Error');
+        console.error('Error adding time slot:', error.message);
+        res.status(500).json({ message: 'Server Error', error: error.message });
     }
 });
 
