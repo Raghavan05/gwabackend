@@ -1540,6 +1540,9 @@ router.get('/blogs', async (req, res) => {
         const totalPatients = await Patient.countDocuments();
         const totalConsultations = await Booking.countDocuments({ doctor: doctor._id, status: 'completed' });
         const totalReviews = doctor.reviews.length;
+        const bookings = await Booking.find({ 
+            doctor: doctor._id, 
+        }).populate('patient');
 
         const totalRatings = doctor.reviews.reduce((acc, review) => acc + review.rating, 0);
         const averageRating = totalReviews > 0 ? (totalRatings / totalReviews).toFixed(1) : 'No ratings';
@@ -1607,7 +1610,8 @@ router.get('/blogs', async (req, res) => {
             totalPostedSlots,
             totalFilledSlots,
             bookingFilter, 
-            insightsFilter
+            insightsFilter,
+            bookings
         });
     } catch (err) {
         console.error(err.message);
