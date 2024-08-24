@@ -102,7 +102,7 @@ router.get('/profile', isLoggedIn, async (req, res) => {
       }
   
       const doctorEmail = req.session.user.email;
-      console.log('Doctor email from session in edit route:', doctorEmail);  // Debugging log
+      console.log('Doctor email from session in edit route:', doctorEmail);  
   
       const doctor = await Doctor.findOne({ email: doctorEmail }).lean();
       if (!doctor) {
@@ -138,62 +138,116 @@ router.get('/profile', isLoggedIn, async (req, res) => {
     }
 });
 
-  router.post('/profile/update', upload.single('profilePicture'), async (req, res) => {
+
+router.post('/profile/update', upload.fields([
+    { name: 'profilePicture' },
+    { name: 'licenseProof' },
+    { name: 'certificationProof' },
+    { name: 'businessProof' }
+]), async (req, res) => {
     try {
-      const doctorEmail = req.session.user.email;
-      let doctor = await Doctor.findOne({ email: doctorEmail });
-  
-      if (!doctor) {
-        return res.status(404).json({ success: false, message: 'Doctor not found' });
-      }
-  
-      let hospitals = [];
-      if (Array.isArray(req.body.hospitals)) {
-        hospitals = req.body.hospitals.map(hospital => ({
-          name: hospital.name,
-          street: hospital.street,
-          city: hospital.city,
-          state: hospital.state,
-          country: hospital.country,
-          zip: hospital.zip
-        }));
-      } else if (req.body.hospitals && req.body.hospitals.name) {
-        hospitals = [{
-          name: req.body.hospitals.name,
-          street: req.body.hospitals.street,
-          city: req.body.hospitals.city,
-          state: req.body.hospitals.state,
-          country: req.body.hospitals.country,
-          zip: req.body.hospitals.zip
-        }];
-      }
-  
-      const updateData = {
-        ...req.body,
-        aboutMe: req.body.aboutMe || doctor.aboutMe,
-        speciality: Array.isArray(req.body.speciality) ? req.body.speciality : [req.body.speciality],
-        languages: Array.isArray(req.body.languages) ? req.body.languages : [req.body.languages],
-        insurances: Array.isArray(req.body.insurances) ? req.body.insurances : [req.body.insurances],
-        awards: Array.isArray(req.body.awards) ? req.body.awards : [req.body.awards],
-        hospitals: hospitals
-      };
-  
-      if (req.file) {
-        updateData.profilePicture = {
-          data: req.file.buffer,
-          contentType: req.file.mimetype
+        const doctorEmail = req.session.user.email;
+        let doctor = await Doctor.findOne({ email: doctorEmail });
+
+        if (!doctor) {
+            return res.status(404).json({ success: false, message: 'Doctor not found' });
+        }
+
+        let hospitals = [];
+        if (Array.isArray(req.body.hospitals)) {
+            hospitals = req.body.hospitals.map((hospital) => {
+                let hospitalData = {
+                    name: hospital.name,
+                    street: hospital.street,
+                    city: hospital.city,
+                    state: hospital.state,
+                    country: hospital.country,
+                    zip: hospital.zip
+                };
+
+                if (hospital.latitude && !isNaN(parseFloat(hospital.latitude))) {
+                    hospitalData.lat = parseFloat(hospital.latitude);
+                }
+                if (hospital.longitude && !isNaN(parseFloat(hospital.longitude))) {
+                    hospitalData.lng = parseFloat(hospital.longitude);
+                }
+
+                return hospitalData;
+            });
+        } else if (req.body.hospitals && req.body.hospitals.name) {
+            let hospitalData = {
+                name: req.body.hospitals.name,
+                street: req.body.hospitals.street,
+                city: req.body.hospitals.city,
+                state: req.body.hospitals.state,
+                country: req.body.hospitals.country,
+                zip: req.body.hospitals.zip
+            };
+
+            if (req.body.hospitals.latitude && !isNaN(parseFloat(req.body.hospitals.latitude))) {
+                hospitalData.lat = parseFloat(req.body.hospitals.latitude);
+            }
+            if (req.body.hospitals.longitude && !isNaN(parseFloat(req.body.hospitals.longitude))) {
+                hospitalData.lng = parseFloat(req.body.hospitals.longitude);
+            }
+
+            hospitals = [hospitalData];
+        }
+
+        const insuranceIds = (Array.isArray(req.body.insurances) ? req.body.insurances : [req.body.insurances])
+            .map(id => id.toString());
+
+        const updateData = {
+            ...req.body,
+            aboutMe: req.body.aboutMe || doctor.aboutMe,
+            speciality: Array.isArray(req.body.speciality) ? req.body.speciality : [req.body.speciality],
+            languages: Array.isArray(req.body.languages) ? req.body.languages : [req.body.languages],
+            insurances: insuranceIds,
+            awards: Array.isArray(req.body.awards) ? req.body.awards : [req.body.awards],
+            faqs: Array.isArray(req.body.faqs) ? req.body.faqs : [req.body.faqs],
+            hospitals: hospitals
         };
-      }
-  
-      doctor = await Doctor.findOneAndUpdate({ email: doctorEmail }, updateData, { new: true });
-      await doctor.save();
-  
-      res.json({ success: true, message: 'Profile updated successfully', doctor });
+
+        if (!updateData.documents) {
+            updateData.documents = {};
+        }
+
+        if (req.files['profilePicture'] && req.files['profilePicture'][0]) {
+            updateData.profilePicture = {
+                data: req.files['profilePicture'][0].buffer,
+                contentType: req.files['profilePicture'][0].mimetype
+            };
+        }
+
+        if (req.files['licenseProof'] && req.files['licenseProof'][0]) {
+            updateData.documents.licenseProof = {
+                data: req.files['licenseProof'][0].buffer,
+                contentType: req.files['licenseProof'][0].mimetype
+            };
+        }
+        if (req.files['certificationProof'] && req.files['certificationProof'][0]) {
+            updateData.documents.certificationProof = {
+                data: req.files['certificationProof'][0].buffer,
+                contentType: req.files['certificationProof'][0].mimetype
+            };
+        }
+        if (req.files['businessProof'] && req.files['businessProof'][0]) {
+            updateData.documents.businessProof = {
+                data: req.files['businessProof'][0].buffer,
+                contentType: req.files['businessProof'][0].mimetype
+            };
+        }
+
+        doctor = await Doctor.findOneAndUpdate({ email: doctorEmail }, updateData, { new: true });
+
+        await doctor.save();
+
+        res.json({ success: true, message: 'Profile updated successfully', doctor });
     } catch (err) {
-      console.error(err.message);
-      res.status(500).json({ success: false, message: 'Server Error' });
+        console.error(err.message);
+        res.status(500).json({ success: false, message: 'Server Error' });
     }
-  });
+});
   
 
 router.post('/profile/verify', isLoggedIn, async (req, res) => {
@@ -997,9 +1051,9 @@ router.post('/blog', isLoggedIn, checkSubscription, upload.single('image'), asyn
         res.json('blog-success', { message: 'Blog uploaded successfully' });
     } catch (err) {
         console.error(err);
-        res.status(500).json({ message: 'Server error' });
+        res.status(500).json({ message: 'Server error' });
     }
-    })
+    })
 
 
 
@@ -1341,7 +1395,7 @@ router.get('/blogs/view/:id', isLoggedIn, checkSubscription,async (req, res) => 
     } catch (err) {
         console.error(err.message);
         res.status(500).send('Server Error');
-    }
+    }
 });
 
   router.get('/author/:id', async (req, res) => {
