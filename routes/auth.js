@@ -272,6 +272,7 @@ router.post('/login', async (req, res) => {
       _id: user._id,
       email: user.email,
       role: user.role,
+      trialEndDate: user.trialEndDate,
       subscriptionType: user.subscriptionType,
       subscriptionVerification: user.subscriptionVerification
     };
@@ -320,6 +321,7 @@ router.get('/google', (req, res) => {
   });
   res.redirect(url);
 });
+
 router.get('/google/callback', async (req, res) => {
   const { code, state } = req.query;
 
@@ -345,8 +347,8 @@ router.get('/google/callback', async (req, res) => {
       const userRole = existingUser.role;
       const userId = existingUser._id;
       const redirectUrl = userRole === 'doctor'
-        ? `${process.env.REACT_URL}/doctorprofile/dashboardpage/start-dashboard?role=${userRole}&name=${name}&id=${userId}`
-        : `${process.env.REACT_URL}/profile/userprofile?role=${userRole}&name=${name}&id=${userId}`;
+        ? `${process.env.REACT_URL}/doctorprofile/dashboardpage/start-dashboard?role=${userRole}&name=${name}&id=${userId}&email=${email}`
+        : `${process.env.REACT_URL}/profile/userprofile?role=${userRole}&name=${name}&id=${userId}&email=${email}`;
       res.redirect(redirectUrl);
     } else {
       const role = JSON.parse(state).role;
@@ -375,8 +377,8 @@ router.get('/google/callback', async (req, res) => {
       req.session.user = newUser;
       const userId = newUser._id;
       const redirectUrl = role === 'doctor'
-        ? `${process.env.REACT_URL}/doctorprofile/dashboardpage/start-dashboard?role=${role}&name=${name}&id=${userId}`
-        : `${process.env.REACT_URL}/profile/userprofile?role=${role}&name=${name}&id=${userId}`;
+        ? `${process.env.REACT_URL}/doctorprofile/dashboardpage/start-dashboard?role=${role}&name=${name}&id=${userId}&email=${email}`
+        : `${process.env.REACT_URL}/profile/userprofile?role=${role}&name=${name}&id=${userId}&email=${email}`;
       res.redirect(redirectUrl);
     }
   } catch (err) {
@@ -384,9 +386,6 @@ router.get('/google/callback', async (req, res) => {
     res.status(500).json({ success: false, message: 'Authentication failed. Please try again.' });
   }
 });
-
-
-
 
 router.get('/logout', (req, res) => {
   req.flash('success_msg', 'Logged out successfully');

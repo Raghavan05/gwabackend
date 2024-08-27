@@ -40,20 +40,24 @@ function isLoggedIn(req, res, next) {
   
   
 
-  
-  function checkSubscription(req, res, next) {
+function checkSubscription(req, res, next) {
     const user = req.session.user;
-    if (user.subscriptionType === 'Premium' || user.subscriptionType === 'Standard') {
-        if (user.subscriptionVerification === 'Verified') {
+    const currentDate = new Date();
+
+
+    if (user.subscriptionVerification === 'Verified') {
+        if (user.subscriptionType === 'Free') {
+            if (user.trialEndDate && currentDate <= new Date(user.trialEndDate)) {
+                return next();
+            } else {
+                return res.json('/doctor/trial-expired');
+            }
+        } else if (user.subscriptionType === 'Premium' || user.subscriptionType === 'Standard') {
             return next();
         }
     }
-    res.status(403).json({ 
-        error: 'Subscription Required', 
-        message: 'You need to have a premium or standard subscription, and it must be verified to access this feature. Please upgrade or verify your subscription.' 
-    });
+    res.json('/doctor/subscription-message');
 }
-
 
 function isDoctor(req, res, next) {
     if (req.session.user && req.session.user.role === 'doctor') {
@@ -138,14 +142,10 @@ router.get('/profile', isLoggedIn, async (req, res) => {
     }
 });
 
-
-router.post('/profile/update', upload.fields([
-    { name: 'profilePicture' },
-    { name: 'licenseProof' },
-    { name: 'certificationProof' },
-    { name: 'businessProof' }
-]), async (req, res) => {
+router.post('/profile/update', isLoggedIn, async (req, res) => {
     try {
+        console.log('Request body:', req.body);
+
         const doctorEmail = req.session.user.email;
         let doctor = await Doctor.findOne({ email: doctorEmail });
 
@@ -153,102 +153,118 @@ router.post('/profile/update', upload.fields([
             return res.status(404).json({ success: false, message: 'Doctor not found' });
         }
 
-        let hospitals = [];
-        if (Array.isArray(req.body.hospitals)) {
-            hospitals = req.body.hospitals.map((hospital) => {
-                let hospitalData = {
+        const updateData = {};
+
+   
+        if (req.body.profilePicture) {
+            updateData.profilePicture = {
+                data: Buffer.from(req.body.profilePicture.data, 'base64'),
+                contentType: req.body.profilePicture.contentType,
+            };
+        }
+
+
+        if (req.body.licenseProof) {
+            updateData.documents = updateData.documents || {};
+            updateData.documents.licenseProof = {
+                data: Buffer.from(req.body.licenseProof.data, 'base64'),
+                contentType: req.body.licenseProof.contentType,
+            };
+        }
+
+        if (req.body.certificationProof) {
+            updateData.documents = updateData.documents || {};
+            updateData.documents.certificationProof = {
+                data: Buffer.from(req.body.certificationProof.data, 'base64'),
+                contentType: req.body.certificationProof.contentType,
+            };
+        }
+
+        if (req.body.businessProof) {
+            updateData.documents = updateData.documents || {};
+            updateData.documents.businessProof = {
+                data: Buffer.from(req.body.businessProof.data, 'base64'),
+                contentType: req.body.businessProof.contentType,
+            };
+        }
+
+        
+        if (req.body.name) {
+            updateData.name = req.body.name;
+        }
+
+        if (req.body.specialization) {
+            updateData.specialization = req.body.specialization;
+        }
+
+        if (req.body.aboutMe) {
+            updateData.aboutMe = req.body.aboutMe;
+        }
+
+        if (req.body.speciality) {
+            updateData.speciality = Array.isArray(req.body.speciality) ? req.body.speciality : [req.body.speciality];
+        }
+
+        if (req.body.languages) {
+            updateData.languages = Array.isArray(req.body.languages) ? req.body.languages : [req.body.languages];
+        }
+
+        if (req.body.insurances) {
+            updateData.insurances = (Array.isArray(req.body.insurances) ? req.body.insurances : [req.body.insurances]).map(id => id.toString());
+        }
+
+        if (req.body.awards) {
+            updateData.awards = Array.isArray(req.body.awards) ? req.body.awards : [req.body.awards];
+        }
+
+        if (req.body.faqs) {
+            updateData.faqs = Array.isArray(req.body.faqs) ? req.body.faqs : [req.body.faqs];
+        }
+
+        if (req.body.hospitals) {
+            let hospitals = [];
+            if (Array.isArray(req.body.hospitals)) {
+                hospitals = req.body.hospitals.map(hospital => ({
                     name: hospital.name,
                     street: hospital.street,
                     city: hospital.city,
                     state: hospital.state,
                     country: hospital.country,
-                    zip: hospital.zip
-                };
-
-                if (hospital.latitude && !isNaN(parseFloat(hospital.latitude))) {
-                    hospitalData.lat = parseFloat(hospital.latitude);
-                }
-                if (hospital.longitude && !isNaN(parseFloat(hospital.longitude))) {
-                    hospitalData.lng = parseFloat(hospital.longitude);
-                }
-
-                return hospitalData;
-            });
-        } else if (req.body.hospitals && req.body.hospitals.name) {
-            let hospitalData = {
-                name: req.body.hospitals.name,
-                street: req.body.hospitals.street,
-                city: req.body.hospitals.city,
-                state: req.body.hospitals.state,
-                country: req.body.hospitals.country,
-                zip: req.body.hospitals.zip
-            };
-
-            if (req.body.hospitals.latitude && !isNaN(parseFloat(req.body.hospitals.latitude))) {
-                hospitalData.lat = parseFloat(req.body.hospitals.latitude);
+                    zip: hospital.zip,
+                    lat: hospital.latitude && !isNaN(parseFloat(hospital.latitude)) ? parseFloat(hospital.latitude) : undefined,
+                    lng: hospital.longitude && !isNaN(parseFloat(hospital.longitude)) ? parseFloat(hospital.longitude) : undefined
+                }));
+            } else if (req.body.hospitals && req.body.hospitals.name) {
+                hospitals = [{
+                    name: req.body.hospitals.name,
+                    street: req.body.hospitals.street,
+                    city: req.body.hospitals.city,
+                    state: req.body.hospitals.state,
+                    country: req.body.hospitals.country,
+                    zip: req.body.hospitals.zip,
+                    lat: req.body.hospitals.latitude && !isNaN(parseFloat(req.body.hospitals.latitude)) ? parseFloat(req.body.hospitals.latitude) : undefined,
+                    lng: req.body.hospitals.longitude && !isNaN(parseFloat(req.body.hospitals.longitude)) ? parseFloat(req.body.hospitals.longitude) : undefined
+                }];
             }
-            if (req.body.hospitals.longitude && !isNaN(parseFloat(req.body.hospitals.longitude))) {
-                hospitalData.lng = parseFloat(req.body.hospitals.longitude);
-            }
-
-            hospitals = [hospitalData];
+            updateData.hospitals = hospitals;
         }
 
-        const insuranceIds = (Array.isArray(req.body.insurances) ? req.body.insurances : [req.body.insurances])
-            .map(id => id.toString());
-
-        const updateData = {
-            ...req.body,
-            aboutMe: req.body.aboutMe || doctor.aboutMe,
-            speciality: Array.isArray(req.body.speciality) ? req.body.speciality : [req.body.speciality],
-            languages: Array.isArray(req.body.languages) ? req.body.languages : [req.body.languages],
-            insurances: insuranceIds,
-            awards: Array.isArray(req.body.awards) ? req.body.awards : [req.body.awards],
-            faqs: Array.isArray(req.body.faqs) ? req.body.faqs : [req.body.faqs],
-            hospitals: hospitals
-        };
-
-        if (!updateData.documents) {
-            updateData.documents = {};
+        if (req.body.doctorFee) {
+            updateData.doctorFee = parseFloat(req.body.doctorFee);
         }
 
-        if (req.files['profilePicture'] && req.files['profilePicture'][0]) {
-            updateData.profilePicture = {
-                data: req.files['profilePicture'][0].buffer,
-                contentType: req.files['profilePicture'][0].mimetype
-            };
-        }
-
-        if (req.files['licenseProof'] && req.files['licenseProof'][0]) {
-            updateData.documents.licenseProof = {
-                data: req.files['licenseProof'][0].buffer,
-                contentType: req.files['licenseProof'][0].mimetype
-            };
-        }
-        if (req.files['certificationProof'] && req.files['certificationProof'][0]) {
-            updateData.documents.certificationProof = {
-                data: req.files['certificationProof'][0].buffer,
-                contentType: req.files['certificationProof'][0].mimetype
-            };
-        }
-        if (req.files['businessProof'] && req.files['businessProof'][0]) {
-            updateData.documents.businessProof = {
-                data: req.files['businessProof'][0].buffer,
-                contentType: req.files['businessProof'][0].mimetype
-            };
-        }
-
-        doctor = await Doctor.findOneAndUpdate({ email: doctorEmail }, updateData, { new: true });
-
-        await doctor.save();
+        doctor = await Doctor.findOneAndUpdate({ email: doctorEmail }, { $set: updateData }, { new: true, runValidators: true });
 
         res.json({ success: true, message: 'Profile updated successfully', doctor });
     } catch (err) {
-        console.error(err.message);
+        console.error('Error updating profile:', err.message);
         res.status(500).json({ success: false, message: 'Server Error' });
     }
 });
-  
+
+
+
+
 
 router.post('/profile/verify', isLoggedIn, async (req, res) => {
     try {
@@ -256,19 +272,21 @@ router.post('/profile/verify', isLoggedIn, async (req, res) => {
         let doctor = await Doctor.findOne({ email: doctorEmail });
 
         if (!doctor) {
-            return res.status(404).send('Doctor not found');
+            return res.status(404).json({ message: 'Doctor not found' });
         }
 
         doctor.verified = 'Pending';
         await doctor.save();
 
-        req.flash('success_msg', 'Verification request sent. You will be notified once verified.');
-        res.redirect('/doctor/profile');
+        return res.status(200).json({
+            message: 'Verification request sent. You will be notified once verified.'
+        });
     } catch (err) {
         console.error(err.message);
-        res.status(500).send('Server Error');
+        return res.status(500).json({ message: 'Server Error' });
     }
 });
+
 
 router.get('/bookings', isLoggedIn, checkSubscription, async (req, res) => {
     try {
@@ -369,16 +387,16 @@ router.post('/bookings/:id', isLoggedIn, async (req, res) => {
                         emailContent = `<div style="font-family: Helvetica, Arial, sans-serif; min-width: 1000px; overflow: auto; line-height: 2;">
                                             <div style="margin: 50px auto; width: 70%; padding: 20px 0;">
                                                 <div style="border-bottom: 1px solid #eee;">
-                                                    <a href="" style="font-size: 1.4em; color: #00466a; text-decoration: none; font-weight: 600;">Global Wellness Alliance</a>
+                                                    <a href="" style="font-size: 1.4em; color: #00466a; text-decoration: none; font-weight: 600;">MedxBay</a>
                                                 </div>
                                                 <p style="font-size: 1.1em;">Hi ${booking.patient.name},</p>
                                                 <p>Your appointment with Dr. ${doctor.name} on ${booking.date.toDateString()} at ${booking.time} has been confirmed.</p>
                                                 <p>Join the meeting using the following link:</p>
                                                 <a href="${booking.meetingLink}" style="background: #00466a; margin: 0 auto; width: max-content; padding: 0 10px; color: #fff; border-radius: 4px; text-decoration: none;">${booking.meetingLink}</a>
-                                                <p style="font-size: 0.9em;">Best regards,<br />Global Wellness Alliance Team</p>
+                                                <p style="font-size: 0.9em;">Best regards,<br />MedxBay Team</p>
                                                 <hr style="border: none; border-top: 1px solid #eee;" />
                                                 <div style="float: right; padding: 8px 0; color: #aaa; font-size: 0.8em; line-height: 1; font-weight: 300;">
-                                                    <p>Global Wellness Alliance</p>
+                                                    <p>MedxBay</p>
                                                     <p>1600 Amphitheatre Parkway</p>
                                                     <p>California</p>
                                                 </div>
@@ -389,16 +407,16 @@ router.post('/bookings/:id', isLoggedIn, async (req, res) => {
                         const acceptanceEmailContent = `<div style="font-family: Helvetica, Arial, sans-serif; min-width: 1000px; overflow: auto; line-height: 2;">
                                                             <div style="margin: 50px auto; width: 70%; padding: 20px 0;">
                                                                 <div style="border-bottom: 1px solid #eee;">
-                                                                    <a href="" style="font-size: 1.4em; color: #00466a; text-decoration: none; font-weight: 600;">Global Wellness Alliance</a>
+                                                                    <a href="" style="font-size: 1.4em; color: #00466a; text-decoration: none; font-weight: 600;">MedxBay</a>
                                                                 </div>
                                                                 <p style="font-size: 1.1em;">Hi Dr. ${doctor.name},</p>
                                                                 <p>The appointment with ${booking.patient.name} on ${booking.date.toDateString()} at ${booking.time} has been confirmed.</p>
                                                                 <p>Join the meeting using the following link:</p>
                                                                 <a href="${booking.meetingLink}" style="background: #00466a; margin: 0 auto; width: max-content; padding: 0 10px; color: #fff; border-radius: 4px; text-decoration: none;">${booking.meetingLink}</a>
-                                                                <p style="font-size: 0.9em;">Best regards,<br />Global Wellness Alliance Team</p>
+                                                                <p style="font-size: 0.9em;">Best regards,<br />MedxBay Team</p>
                                                                 <hr style="border: none; border-top: 1px solid #eee;" />
                                                                 <div style="float: right; padding: 8px 0; color: #aaa; font-size: 0.8em; line-height: 1; font-weight: 300;">
-                                                                    <p>Global Wellness Alliance</p>
+                                                                    <p>MedxBay</p>
                                                                     <p>1600 Amphitheatre Parkway</p>
                                                                     <p>California</p>
                                                                 </div>
@@ -417,15 +435,15 @@ router.post('/bookings/:id', isLoggedIn, async (req, res) => {
                         emailContent = `<div style="font-family: Helvetica, Arial, sans-serif; min-width: 1000px; overflow: auto; line-height: 2;">
                                             <div style="margin: 50px auto; width: 70%; padding: 20px 0;">
                                                 <div style="border-bottom: 1px solid #eee;">
-                                                    <a href="" style="font-size: 1.4em; color: #00466a; text-decoration: none; font-weight: 600;">Global Wellness Alliance</a>
+                                                    <a href="" style="font-size: 1.4em; color: #00466a; text-decoration: none; font-weight: 600;">MedxBay</a>
                                                 </div>
                                                 <p style="font-size: 1.1em;">Hi ${booking.patient.name},</p>
                                                 <p>Your appointment with Dr. ${doctor.name} on ${booking.date.toDateString()} at ${booking.time} has been confirmed.</p>
                                                 <p>Please visit the hospital at ${booking.hospital.name}, ${booking.hospital.location.street}, ${booking.hospital.location.city}, ${booking.hospital.location.state}, ${booking.hospital.location.country}, ${booking.hospital.location.zip}</p>
-                                                <p style="font-size: 0.9em;">Best regards,<br />Global Wellness Alliance Team</p>
+                                                <p style="font-size: 0.9em;">Best regards,<br />MedxBay Team</p>
                                                 <hr style="border: none; border-top: 1px solid #eee;" />
                                                 <div style="float: right; padding: 8px 0; color: #aaa; font-size: 0.8em; line-height: 1; font-weight: 300;">
-                                                    <p>Global Wellness Alliance</p>
+                                                    <p>MedxBay</p>
                                                     <p>1600 Amphitheatre Parkway</p>
                                                     <p>California</p>
                                                 </div>
@@ -445,14 +463,14 @@ router.post('/bookings/:id', isLoggedIn, async (req, res) => {
                     emailContent = `<div style="font-family: Helvetica, Arial, sans-serif; min-width: 1000px; overflow: auto; line-height: 2;">
                                         <div style="margin: 50px auto; width: 70%; padding: 20px 0;">
                                             <div style="border-bottom: 1px solid #eee;">
-                                                <a href="" style="font-size: 1.4em; color: #00466a; text-decoration: none; font-weight: 600;">Global Wellness Alliance</a>
+                                                <a href="" style="font-size: 1.4em; color: #00466a; text-decoration: none; font-weight: 600;">MedxBay</a>
                                             </div>
                                             <p style="font-size: 1.1em;">Hi ${booking.patient.name},</p>
                                             <p>We regret to inform you that your appointment with Dr. ${doctor.name} on ${booking.date.toDateString()} at ${booking.time} has been rejected.</p>
-                                            <p style="font-size: 0.9em;">Best regards,<br />Global Wellness Alliance Team</p>
+                                            <p style="font-size: 0.9em;">Best regards,<br />MedxBay Team</p>
                                             <hr style="border: none; border-top: 1px solid #eee;" />
                                             <div style="float: right; padding: 8px 0; color: #aaa; font-size: 0.8em; line-height: 1; font-weight: 300;">
-                                                <p>Global Wellness Alliance</p>
+                                                <p>MedxBay</p>
                                                 <p>1600 Amphitheatre Parkway</p>
                                                 <p>California</p>
                                             </div>
@@ -711,30 +729,38 @@ router.delete('/manage-time-slots/:id', isLoggedIn, checkSubscription, async (re
 
 router.post('/add-time-slot', isLoggedIn, checkSubscription, async (req, res) => {
     try {
-        console.log('Request Body:', req.body);
-
         const doctorEmail = req.session.user.email;
-        const { date, startTime, endTime, hospital, slotType, endDate } = req.body;
+        const { date, startTime, endTime, hospital, endDate } = req.body;
 
         const doctor = await Doctor.findOne({ email: doctorEmail });
         if (!doctor) {
-            return res.status(404).json({ message: 'Doctor not found' });
+            return res.status(404).send('Doctor not found');
+        }
+
+        if (doctor.subscriptionType === 'Free' && doctor.maxTimeSlots <= 0) {
+            return res.json({ error: 'You have reached the limit of time slots for the free trial. Please subscribe to add more.' });
         }
 
         const selectedHospital = doctor.hospitals.find(h => h.name === hospital);
-
         if (!selectedHospital) {
-            return res.status(404).json({ message: 'Hospital not found' });
+            return res.status(404).send('Hospital not found');
         }
-
-        console.log('Selected Hospital:', selectedHospital);
 
         const start = new Date(date);
         const end = new Date(endDate || date);
 
+        if (isNaN(start.getTime()) || isNaN(end.getTime()) || !/^([01]\d|2[0-3]):([0-5]\d)$/.test(startTime) || !/^([01]\d|2[0-3]):([0-5]\d)$/.test(endTime)) {
+            return res.status(400).send('Invalid date or time format');
+        }
+
         let currentDate = new Date(start);
+        let newTimeSlots = [];
 
         while (currentDate <= end) {
+            if (doctor.subscriptionType === 'Free' && doctor.maxTimeSlots <= 0) {
+                return res.json({ error: 'You have reached the limit of time slots for the free trial. Please subscribe to add more.' });
+            }
+
             const newTimeSlot = {
                 date: new Date(currentDate),
                 startTime,
@@ -750,20 +776,35 @@ router.post('/add-time-slot', isLoggedIn, checkSubscription, async (req, res) =>
                 }
             };
 
-            console.log('New Time Slot:', newTimeSlot);
+            if (selectedHospital.lat && selectedHospital.lng) {
+                newTimeSlot.lat = selectedHospital.lat;
+                newTimeSlot.lng = selectedHospital.lng;
+            }
 
-            doctor.timeSlots.push(newTimeSlot);
+            newTimeSlots.push(newTimeSlot);
             currentDate.setDate(currentDate.getDate() + 1);
         }
 
-        await doctor.save();
+        if (doctor.subscriptionType === 'Free' && newTimeSlots.length > doctor.maxTimeSlots) {
+            return res.json({ error: 'You are allowed to add only a limited number of time slots for the free trial. Please subscribe to add more.' });
+        }
 
-        res.status(200).json({ message: 'Time slots added successfully' });
+        doctor.timeSlots.push(...newTimeSlots);
+
+        if (doctor.subscriptionType === 'Free') {
+            doctor.maxTimeSlots -= newTimeSlots.length;
+        }
+
+        await doctor.save();
+        res.json({ success: 'Time slots added successfully.' });
+        // res.redirect('/doctor/manage-time-slots');
     } catch (error) {
-        console.error('Error adding time slot:', error.message);
-        res.status(500).json({ message: 'Server Error', error: error.message });
+        console.error(error.message);
+        res.status(500).send('Server Error');
     }
 });
+
+
 
     
 async function createGoogleMeetLink(booking) {
