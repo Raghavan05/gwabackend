@@ -124,23 +124,26 @@ router.get('/profile', isLoggedIn, async (req, res) => {
     }
   });
   
-  router.get('/profile/update', isLoggedIn, async (req, res) => {
-    try {
-        const doctorEmail = req.session.user.email;
-        const doctor = await Doctor.findOne({ email: doctorEmail }).lean();
-
-        if (!doctor) {
-            return res.status(404).send('Doctor not found');
-        }
-
-        const insurances = await Insurance.find({ '_id': { $in: doctor.insurances } }).select('name logo');
-        const blogs = await Blog.find({ authorId: doctor._id, verificationStatus: 'Verified' });
-        res.json({ doctor, insurances ,blogs });
-    } catch (err) {
-        console.error(err.message);
-        res.status(500).send('Server Error');
-    }
-});
+router.get('/profile/update', isLoggedIn, async (req, res) => {
+      try {
+          const doctorEmail = req.session.user.email;
+          const doctor = await Doctor.findOne({ email: doctorEmail }).lean();
+  
+          if (!doctor) {
+              return res.status(404).send('Doctor not found');
+          }
+  
+          const allInsurances = await Insurance.find({}).select('_id name logo');
+  
+          const insurances = await Insurance.find({ '_id': { $in: doctor.insurances } }).select('name logo');
+          const blogs = await Blog.find({ authorId: doctor._id, verificationStatus: 'Verified' });
+  
+          res.json({ doctor, insurances, allInsurances, blogs });
+      } catch (err) {
+          console.error(err.message);
+          res.status(500).send('Server Error');
+      }
+  });
 
 router.post('/profile/update', isLoggedIn, async (req, res) => {
     try {
