@@ -124,26 +124,21 @@ router.get('/profile', isLoggedIn, async (req, res) => {
     }
   });
   
-router.get('/profile/update', isLoggedIn, async (req, res) => {
-      try {
-          const doctorEmail = req.session.user.email;
-          const doctor = await Doctor.findOne({ email: doctorEmail }).lean();
-  
-          if (!doctor) {
-              return res.status(404).send('Doctor not found');
-          }
-  
-          const allInsurances = await Insurance.find({}).select('_id name logo');
-  
-          const insurances = await Insurance.find({ '_id': { $in: doctor.insurances } }).select('name logo');
-          const blogs = await Blog.find({ authorId: doctor._id, verificationStatus: 'Verified' });
-  
-          res.json({ doctor, insurances, allInsurances, blogs });
-      } catch (err) {
-          console.error(err.message);
-          res.status(500).send('Server Error');
-      }
-  });
+  router.get('/profile/update', isLoggedIn, async (req, res) => {
+    try {
+        const doctorEmail = req.session.user.email;
+        const doctor = await Doctor.findOne({ email: doctorEmail }).lean();
+        if (!doctor) return res.status(404).send('Doctor not found');
+        
+        const allInsurances = await Insurance.find({}).select('_id name logo');
+        const insurances = await Insurance.find({ '_id': { $in: doctor.insurances } }).select('_id name logo');
+        
+        res.json({ doctor, insurances, allInsurances });
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).send('Server Error');
+    }
+});
 
 router.post('/profile/update', isLoggedIn, async (req, res) => {
     try {
@@ -195,15 +190,57 @@ router.post('/profile/update', isLoggedIn, async (req, res) => {
         if (req.body.name) {
             updateData.name = req.body.name;
         }
-
-        if (req.body.specialization) {
-            updateData.specialization = req.body.specialization;
+        if (req.body.title) {
+            updateData.title = req.body.title;
         }
-
         if (req.body.aboutMe) {
             updateData.aboutMe = req.body.aboutMe;
         }
+        if (req.body.dateOfBirth) {
+            updateData.dateOfBirth = req.body.dateOfBirth;
+        }
+        if (req.body.gender) {
+            updateData.gender = req.body.gender;
+        }
+        if (req.body.country) {
+            updateData.country = req.body.country;
+        }
 
+        if (req.body.state) {
+            updateData.state = req.body.state;
+        }
+        if (req.body.cities) {
+            updateData.cities = req.body.cities;
+        }
+
+        if (req.body.availability) {
+            updateData.availability = req.body.availability;
+        }
+        if (req.body.consultation) {
+            updateData.consultation = req.body.consultation;
+        }
+
+        if (req.body.facebook) {
+            updateData.facebook = req.body.facebook;
+        }
+
+        if (req.body.twitter) {
+            updateData.twitter = req.body.twitter;
+        }
+
+        if (req.body.instagram) {
+            updateData.instagram = req.body.instagram;
+        }
+
+        if (req.body.linkedin) {
+            updateData.linkedin = req.body.linkedin;
+        }
+        if (req.body.specialization) {
+            updateData.specialization = req.body.specialization;
+        }
+        if (req.body.conditions) {
+            updateData.conditions = Array.isArray(req.body.conditions) ? req.body.conditions : [req.body.conditions];
+        }
         if (req.body.speciality) {
             updateData.speciality = Array.isArray(req.body.speciality) ? req.body.speciality : [req.body.speciality];
         }
@@ -1635,12 +1672,15 @@ router.get('/blogs', async (req, res) => {
             return res.status(404).json({ message: 'Doctor not found' });
         }
 
-        const totalPatients = await Patient.countDocuments();
+        const totalPatients = await Booking.aggregate([
+            { $match: { doctor: doctor._id, status: 'completed' } }, 
+            { $group: { _id: "$patient" } },
+            { $count: "uniquePatients" } 
+        ]);
+
         const totalConsultations = await Booking.countDocuments({ doctor: doctor._id, status: 'completed' });
         const totalReviews = doctor.reviews.length;
-        const bookings = await Booking.find({ 
-            doctor: doctor._id, 
-        }).populate('patient');
+        const bookings = await Booking.find({ doctor: doctor._id }).populate('patient');
 
         const totalRatings = doctor.reviews.reduce((acc, review) => acc + review.rating, 0);
         const averageRating = totalReviews > 0 ? (totalRatings / totalReviews).toFixed(1) : 'No ratings';
@@ -1698,7 +1738,7 @@ router.get('/blogs', async (req, res) => {
 
         res.json({
             doctor,
-            totalPatients,
+            totalPatients: totalPatients[0]?.uniquePatients || 0, 
             totalConsultations,
             totalReviews,
             averageRating,
@@ -1707,7 +1747,7 @@ router.get('/blogs', async (req, res) => {
             waitingAppointmentsCount,
             totalPostedSlots,
             totalFilledSlots,
-            bookingFilter, 
+            bookingFilter,
             insightsFilter,
             bookings
         });
