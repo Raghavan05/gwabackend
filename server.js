@@ -14,6 +14,10 @@ const cors = require('cors');
 dotenv.config();
 
 const app = express();
+
+require('./cronJobs'); 
+require('./slotsDelete');
+
 app.use(express.json({ limit: '50mb' })); 
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
@@ -31,9 +35,14 @@ app.use(cors({
 }));
 
 
-mongoose.connect(process.env.MONGODB_URI, { useNewUrlParser: true, useUnifiedTopology: true })
-  .then(() => console.log('MongoDB connected'))
-  .catch(err => console.error('MongoDB connection error:', err));
+mongoose.connect(process.env.MONGODB_URI, { 
+  useNewUrlParser: true, 
+  useUnifiedTopology: true,
+  serverSelectionTimeoutMS: 50000, 
+  socketTimeoutMS: 45000 
+})
+.then(() => console.log('MongoDB connected'))
+.catch(err => console.error('MongoDB connection error:', err));
 
 const sessionStore = MongoStore.create({
   mongoUrl: process.env.MONGODB_URI,

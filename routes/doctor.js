@@ -250,7 +250,10 @@ router.post('/profile/update', isLoggedIn, async (req, res) => {
         }
 
         if (req.body.insurances) {
-            updateData.insurances = (Array.isArray(req.body.insurances) ? req.body.insurances : [req.body.insurances]).map(id => id.toString());
+            const newInsurances = (Array.isArray(req.body.insurances) ? req.body.insurances : [req.body.insurances]).map(id => id.toString());
+            const currentInsurances = new Set(doctor.insurances.map(id => id.toString()));
+            newInsurances.forEach(id => currentInsurances.add(id));
+            updateData.insurances = Array.from(currentInsurances);
         }
 
         if (req.body.awards) {
@@ -271,8 +274,8 @@ router.post('/profile/update', isLoggedIn, async (req, res) => {
                     state: hospital.state,
                     country: hospital.country,
                     zip: hospital.zip,
-                    lat: hospital.latitude && !isNaN(parseFloat(hospital.latitude)) ? parseFloat(hospital.latitude) : undefined,
-                    lng: hospital.longitude && !isNaN(parseFloat(hospital.longitude)) ? parseFloat(hospital.longitude) : undefined
+                    lat: hospital.lat && !isNaN(parseFloat(hospital.lat)) ? parseFloat(hospital.lat) : undefined,
+                    lng: hospital.lng && !isNaN(parseFloat(hospital.lng)) ? parseFloat(hospital.lng) : undefined
                 }));
             } else if (req.body.hospitals && req.body.hospitals.name) {
                 hospitals = [{
@@ -282,8 +285,8 @@ router.post('/profile/update', isLoggedIn, async (req, res) => {
                     state: req.body.hospitals.state,
                     country: req.body.hospitals.country,
                     zip: req.body.hospitals.zip,
-                    lat: req.body.hospitals.latitude && !isNaN(parseFloat(req.body.hospitals.latitude)) ? parseFloat(req.body.hospitals.latitude) : undefined,
-                    lng: req.body.hospitals.longitude && !isNaN(parseFloat(req.body.hospitals.longitude)) ? parseFloat(req.body.hospitals.longitude) : undefined
+                    lat: req.body.hospitals.lat && !isNaN(parseFloat(req.body.hospitals.lat)) ? parseFloat(req.body.hospitals.lat) : undefined,
+                    lng: req.body.hospitals.lng && !isNaN(parseFloat(req.body.hospitals.lng)) ? parseFloat(req.body.hospitals.lng) : undefined
                 }];
             }
             updateData.hospitals = hospitals;
@@ -301,7 +304,6 @@ router.post('/profile/update', isLoggedIn, async (req, res) => {
         res.status(500).json({ success: false, message: 'Server Error' });
     }
 });
-
 
 
 
@@ -1370,7 +1372,7 @@ router.post('/chats/:chatId/send-message', isLoggedIn, async (req, res) => {
         console.log("Notification created with chat ID:", chat._id);
       }
   
-      res.redirect(`/doctor/chat/${chat._id}`);
+      res.json(`/doctor/chat/${chat._id}`);
   
     } catch (error) {
       console.error("Error:", error.message);
