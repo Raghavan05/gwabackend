@@ -140,6 +140,7 @@ app.use((err, req, res, next) => {
   console.error('Error:', err.stack);
   res.status(500).send('Something broke!');
 });
+
 app.get('/auth/search-doctors', async (req, res) => {
   const { what, where, country, state, city, speciality, conditions, languages, gender, availability, dateAvailability, consultation } = req.query;
 
@@ -203,12 +204,31 @@ app.get('/auth/search-doctors', async (req, res) => {
     ];
 
     const doctors = await Doctor.aggregate(pipeline);
-    // console.log(doctors)
-    res.json(doctors);
+
+    if (doctors.length === 0) {
+      return res.status(200).json({ message: 'No doctors found.' });
+    }
+
+    const doctorIds = doctors.map(doctor => doctor._id);
+    
+    try {
+      const fullDoctorDetails = await Doctor.find({ _id: { $in: doctorIds } });
+  
+      if (fullDoctorDetails && fullDoctorDetails.length > 0) {
+        res.json(fullDoctorDetails); 
+      } else {
+        res.status(404).json({ message: 'Doctors not found' });
+      }
+    } catch (error) {
+      console.error('Error retrieving doctor details:', error);
+      res.status(500).json({ message: 'Internal server error' });
+    }
   } catch (error) {
     res.status(500).json({ message: 'Error fetching doctors', error });
   }
 });
+
+
 
 app.get('/auth/countries', async (req, res) => {
   try {
@@ -353,18 +373,5 @@ app.get('/auth/where-options', async (req, res) => {
     res.status(500).json({ message: 'Error fetching where options', error });
   }
 });
-
-
-app.post('/submit-lead', async (req, res) => {
-  const { name, email } = req.body;
-  try {
-    const lead = new Leads({ name, email });
-    await lead.save();
-    res.status(200).json({ message: 'Details saved successfully' });
-  } catch (error) {
-    res.status(500).json({ message: 'Error saving lead', error });
-  }
-});
-
 const PORT = process.env.PORT || 8000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
