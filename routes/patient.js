@@ -559,15 +559,16 @@ router.get('/blogs/view/:id', async (req, res) => {
       const blog = await Blog.findById(blogId).lean();
 
       if (!blog) {
-          return res.status(404).send('Blog not found');
+          return res.status(404).json({ error: 'Blog not found' });
       }
 
-      res.render('PatientViewBlog', { blog });
+      res.json({ blog });
   } catch (err) {
       console.error(err.message);
-      res.status(500).send('Server Error');
+      res.status(500).json({ error: 'Server Error' });
   }
 });
+
 
 
 
