@@ -28,6 +28,8 @@ const doctorSchema = new mongoose.Schema({
   dateOfBirth: Date,
   bloodGroup: String,
   languages: [String],
+  doctorFee:{type: Number, default: 85},
+
   hospitals: [{
     name: { type: String, },
     street: { type: String, },
@@ -97,8 +99,10 @@ const doctorSchema = new mongoose.Schema({
   },
   resetPasswordToken: String,
   resetPasswordExpires: Date,
+  tempDoctorFee: Number,
   totalDoctorFee: Number,
   serviceCharge: Number,
+  tempDoctorFeeStatus: { type: String, enum: ['Pending', 'Not Paid', 'Paid', "Partially Paid"], default: 'Pending' },
 });
 
 module.exports = mongoose.model('Doctor', doctorSchema);

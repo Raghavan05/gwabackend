@@ -13,7 +13,7 @@ const Chat = require('../models/Chat');
 const Prescription = require('../models/Prescription');
 const Notification = require('../models/Notification');
 const Insurance = require('../models/Insurance');
-
+const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const storage = multer.memoryStorage();
 const upload = multer({ storage: storage });
 
@@ -220,54 +220,181 @@ router.get('/doctors/:id/slots', async (req, res) => {
 });
 
 
-router.post('/book', isLoggedIn, async (req, res) => {
-  try {
-      const { doctorId, date, startTime, consultationType } = req.body;
-      const patientId = req.session.user._id;
+// router.post('/book', isLoggedIn, async (req, res) => {
+//   try {
+//       const { doctorId, date, startTime, consultationType } = req.body;
+//       const patientId = req.session.user._id;
 
    
-      console.log('Request body:', req.body);
-      console.log('Patient ID:', patientId);
+//       console.log('Request body:', req.body);
+//       console.log('Patient ID:', patientId);
 
-      const doctor = await Doctor.findById(doctorId);
-      if (!doctor) {
-          return res.status(404).json({ error: 'Doctor not found' });
-      }
+//       const doctor = await Doctor.findById(doctorId);
+//       if (!doctor) {
+//           return res.status(404).json({ error: 'Doctor not found' });
+//       }
 
  
 
-      const requestDateString = new Date(date).toDateString();
+//       const requestDateString = new Date(date).toDateString();
 
-      const slot = doctor.timeSlots.find(slot =>
-          new Date(slot.date).toDateString() === requestDateString && slot.startTime === startTime
-      );
+//       const slot = doctor.timeSlots.find(slot =>
+//           new Date(slot.date).toDateString() === requestDateString && slot.startTime === startTime
+//       );
 
-      if (!slot) {
-          return res.status(400).json({ error: 'Time slot not found' });
+//       if (!slot) {
+//           return res.status(400).json({ error: 'Time slot not found' });
+//       }
+
+//       const booking = new Booking({
+//           patient: patientId,
+//           doctor: doctorId,
+//           date: new Date(date),
+//           time: `${slot.startTime} - ${slot.endTime}`,
+//           consultationType: consultationType,
+//           status: 'waiting',
+//           hospital: {
+//               name: slot.hospital,
+//               location: slot.hospitalLocation
+//           }
+//       });
+//       console.log('Booking data to save:', booking);
+//       await booking.save();
+
+//       slot.status = 'booked';
+//       await doctor.save();
+
+//       res.status(200).json({ message: 'Booking successful' });
+//   } catch (error) {
+//       console.error(error.message);
+//       res.status(500).json({ error: 'Server error' });
+//   }
+// });
+router.post('/book', isLoggedIn, async (req, res) => {
+  try {
+    const { doctorId, date, startTime, consultationType } = req.body;
+    const patientId = req.session.user._id;
+
+    const parsedDate = new Date(date);
+    if (isNaN(parsedDate.getTime()) || !/^([01]\d|2[0-3]):([0-5]\d)$/.test(startTime)) {
+        return res.status(400).send('Invalid date or start time format');
+    }
+
+    const doctor = await Doctor.findById(doctorId);
+    if (!doctor) {
+        return res.status(404).send('Doctor not found');
+    }
+
+    const slot = doctor.timeSlots.find(slot =>
+      slot && new Date(slot.date).toISOString() === parsedDate.toISOString() && slot.startTime === startTime
+    );
+
+    if (!slot) {
+        return res.status(400).send('Time slot not found');
+    }
+
+    let totalFee = doctor.doctorFee || 0;
+    let serviceCharge = 0;
+
+    const session = await stripe.checkout.sessions.create({
+      payment_method_types: ['card'],
+      line_items: [{
+          price_data: {
+              currency: 'usd',
+              product_data: {
+                  name: `Appointment Booking for Dr. ${doctor.name}: ${consultationType} on ${parsedDate.toLocaleDateString()} at ${startTime}`,
+              },
+              unit_amount: Math.round(totalFee * 100), // Ensure totalFee is a number
+          },
+          quantity: 1,
+      }],
+      mode: 'payment',
+      metadata: {
+          doctorId: doctorId.toString(),
+          date: date,
+          startTime: startTime,
+          consultationType: consultationType,
+          serviceCharge: serviceCharge.toFixed(2), // Ensure serviceCharge is a number
+          totalFee: totalFee.toFixed(2) // Ensure totalFee is a number
+      },
+      success_url: `${req.protocol}://${req.get('host')}/patient/book/payment-success?doctorId=${doctorId}&date=${encodeURIComponent(date)}&startTime=${encodeURIComponent(startTime)}&consultationType=${consultationType}&session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${req.protocol}://${req.get('host')}/patient/book/payment-failure`,
+    });
+
+    res.json({ url: session.url }); // Updated to return JSON object
+  } catch (error) {
+    console.error('Error creating Stripe session:', error.message);
+    res.status(500).send('Server Error');
+  }
+});
+
+router.get('/book/payment-success', async (req, res) => {
+  try {
+    const { doctorId, date, startTime, consultationType, session_id } = req.query;
+    const patientId = req.session.user._id;
+
+    const session = await stripe.checkout.sessions.retrieve(session_id);
+
+    if (session.payment_status === 'paid') {
+      const doctor = await Doctor.findById(doctorId);
+      if (!doctor) {
+        return res.status(404).send('Doctor not found');
       }
 
-      const booking = new Booking({
-          patient: patientId,
-          doctor: doctorId,
-          date: new Date(date),
-          time: `${slot.startTime} - ${slot.endTime}`,
-          consultationType: consultationType,
-          status: 'waiting',
-          hospital: {
-              name: slot.hospital,
-              location: slot.hospitalLocation
-          }
-      });
-      console.log('Booking data to save:', booking);
-      await booking.save();
+      const slotIndex = doctor.timeSlots.findIndex(slot =>
+        new Date(slot.date).toISOString() === new Date(date).toISOString() && slot.startTime === startTime
+      );
 
-      slot.status = 'booked';
+      if (slotIndex === -1) {
+        return res.status(400).send('Time slot not found');
+      }
+
+      doctor.timeSlots[slotIndex].status = 'booked';
+
+      let totalFee = doctor.doctorFee || 0;
+      let serviceCharge = 0;
+
+      if (doctor.subscriptionType === 'Standard') {
+        serviceCharge = (3 / 100) * doctor.doctorFee;
+        totalFee -= serviceCharge;
+        doctor.serviceCharge = (doctor.serviceCharge || 0) + Math.round(serviceCharge * 100);
+        doctor.totalDoctorFee = (doctor.totalDoctorFee || 0) + Math.round(totalFee * 100);
+        doctor.tempDoctorFee = (doctor.tempDoctorFee || 0) + Math.round(totalFee * 100);
+        doctor.tempDoctorFeeStatus = 'Pending';
+      }
+
+      if (doctor.subscriptionType === 'Premium') {
+        doctor.totalDoctorFee = (doctor.totalDoctorFee || 0) + Math.round(totalFee * 100);
+        doctor.tempDoctorFee = (doctor.tempDoctorFee || 0) + Math.round(totalFee * 100);
+        doctor.tempDoctorFeeStatus = 'Pending';  
+      }
+
       await doctor.save();
 
-      res.status(200).json({ message: 'Booking successful' });
+      const booking = new Booking({
+        patient: patientId,
+        doctor: doctorId,
+        date: new Date(date), 
+        time: `${doctor.timeSlots[slotIndex].startTime} - ${doctor.timeSlots[slotIndex].endTime}`,
+        consultationType: consultationType,
+        status: 'waiting',
+        hospital: {
+          name: doctor.timeSlots[slotIndex].hospital,
+          location: doctor.timeSlots[slotIndex].hospitalLocation
+        },
+        payment: totalFee,
+        paid: true // Correct boolean value
+      });
+
+      await booking.save();
+      
+      res.render('patient-payment-success', { booking });
+    } else {
+      res.status(400).send('Payment not completed');
+    }
   } catch (error) {
-      console.error(error.message);
-      res.status(500).json({ error: 'Server error' });
+    console.error('Error processing payment success:', error.message);
+    res.status(500).send('Server Error');
   }
 });
 
@@ -426,7 +553,7 @@ router.get('/calendar', isLoggedIn, async (req, res) => {
   }
 });
 
-router.get('/blogs/view/:id', isLoggedIn, async (req, res) => {
+router.get('/blogs/view/:id', async (req, res) => {
   try {
       const blogId = req.params.id;
       const blog = await Blog.findById(blogId).lean();

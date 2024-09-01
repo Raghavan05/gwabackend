@@ -984,21 +984,19 @@ router.get('/subscribe', isLoggedIn, async (req, res) => {
     res.render('subscriptionForm');
 });
 
-router.post('/subscribe', upload.fields([{ name: 'licenseProof' }, { name: 'certificationProof' }, { name: 'businessProof' }]), isLoggedIn, async (req, res) => {
+router.post('/subscribe', isLoggedIn, async (req, res) => {
     try {
-    const { subscriptionType } = req.body;
+    const { subscriptionType ,subscriptionDuration} = req.body;
     const paymentDetails = req.body.paymentDetails;
     const doctorId = req.session.user._id; 
     const amount = parseInt(paymentDetails.amount, 10);
     console.log(amount);
     
         if (isNaN(amount) || amount <= 0) {
-            return res.status(400).send('Invalid payment amount');
+            return res.json(400).send('Invalid payment amount');
         }
     
-        const licenseProof = req.files['licenseProof'][0];
-        const certificationProof = req.files['certificationProof'][0];
-        const businessProof = req.files['businessProof'][0];
+
     
         const session = await stripe.checkout.sessions.create({
             payment_method_types: ['card'],
@@ -1020,54 +1018,43 @@ router.post('/subscribe', upload.fields([{ name: 'licenseProof' }, { name: 'cert
         req.session.subscriptionInfo = {
             doctorId,
             subscriptionType,
+            subscriptionDuration,  // Store the subscription duration
             paymentDetails: {
                 amount: amount,
                 currency: 'usd'
-            },
-            licenseProof,
-            certificationProof,
-            businessProof
+            }
         };
     
-        res.redirect(303, session.url);
+        res.json(session.url);
     } catch (error) {
         console.error(error.message);
-        res.status(500).send('Server Error');
+        res.json(500).send('Server Error');
     }
     });
     
-router.get('/subscription-success', async (req, res) => {
+    router.get('/subscription-success', async (req, res) => {
         try {
             const session = await stripe.checkout.sessions.retrieve(req.query.session_id);
-        
+    
             if (session.payment_status === 'paid') {
-                const { doctorId, subscriptionType, paymentDetails, licenseProof, certificationProof, businessProof } = req.session.subscriptionInfo;
+                const { doctorId, subscriptionType, paymentDetails, subscriptionDuration } = req.session.subscriptionInfo;
+                const subscriptionDate = new Date();
     
                 const paymentDetailsString = JSON.stringify(paymentDetails);
-        
+    
                 const updatedDoctor = await Doctor.findByIdAndUpdate(
                     doctorId,
                     {
                         subscription: 'Pending',
                         subscriptionType,
                         paymentDetails: paymentDetailsString,
-                        'documents.licenseProof': {
-                            data: licenseProof.buffer,
-                            contentType: licenseProof.mimetype
-                        },
-                        'documents.certificationProof': {
-                            data: certificationProof.buffer,
-                            contentType: certificationProof.mimetype
-                        },
-                        'documents.businessProof': {
-                            data: businessProof.buffer,
-                            contentType: businessProof.mimetype
-                        },
-                        subscriptionVerification: 'Pending'
+                        subscriptionVerification: 'Verified',
+                        subscriptionDate,
+                        subscriptionDuration: subscriptionDuration === 'annual' ? 'annual' : 'monthly'
                     },
                     { new: true }
                 );
-        
+    
                 res.render('subscriptionSuccess', { doctor: updatedDoctor });
             } else {
                 res.status(400).send('Payment was not successful');
