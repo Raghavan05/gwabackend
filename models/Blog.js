@@ -7,8 +7,8 @@ const blogSchema = new Schema({
     description: { type: String, required: true },
     // summary: { type: String, required:   true },
     authorEmail: { type: String, required: true },
-    authorTitle: { type: String, required: true },
-    aboutMe: { type: String, required: true },
+    authorTitle: { type: String},
+    aboutMe: { type: String},
     date: { type: Date, default: Date.now },
     image: {
         data: Buffer,

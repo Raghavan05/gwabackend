@@ -1086,6 +1086,7 @@ router.post('/blog', isLoggedIn, checkSubscription, upload.single('image'), asyn
         let authorId = null;
         let authorTitle = '';
         let profilePicture = null;
+        let aboutMe = '';
         
         if (doctor) {
             authorId = doctor._id; 
@@ -1125,7 +1126,6 @@ router.post('/blog', isLoggedIn, checkSubscription, upload.single('image'), asyn
         res.status(500).json({ message: 'Server error' });
     }
     })
-
 
 
 router.get('/blogs', isDoctor, isLoggedIn, async (req, res) => {
@@ -1461,7 +1461,7 @@ router.get('/blogs/view/:id', isLoggedIn, checkSubscription,async (req, res) => 
   
         await blog.save();
   
-        res.render('blog-success', { message: 'Blog uploaded successfully' });
+        res.json({ message: 'Blog uploaded successfully' });
         // res.redirect(/doctor/blogs/view/${blogId});
     } catch (err) {
         console.error(err.message);
