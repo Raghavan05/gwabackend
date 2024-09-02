@@ -1077,7 +1077,7 @@ router.get('/blog', (req, res) => {
 router.post('/blog', isLoggedIn, checkSubscription, upload.single('image'), async (req, res) => {
     try {
         const authorEmail = req.session.user.email;
-        const { title, author, description, categories, hashtags, priority } = req.body;
+        const { title, author, description, categories, hashtags, priority,subcategories } = req.body;
 
         const doctor = await Doctor.findOne({ email: authorEmail });
 
@@ -1105,6 +1105,7 @@ router.post('/blog', isLoggedIn, checkSubscription, upload.single('image'), asyn
             authorId, 
             authorTitle,
             aboutMe,
+            subcategories:subcategories,
             profilePicture,
             categories: categories, 
             hashtags: hashtagsArray, 
@@ -1118,7 +1119,7 @@ router.post('/blog', isLoggedIn, checkSubscription, upload.single('image'), asyn
 
         await newBlog.save();
 
-        res.json('blog-success', { message: 'Blog uploaded successfully' });
+        res.json({ message: 'Blog uploaded successfully' });
     } catch (err) {
         console.error(err);
         res.status(500).json({ message: 'Server error' });
