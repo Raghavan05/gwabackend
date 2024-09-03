@@ -984,6 +984,7 @@ router.get('/subscribe', isLoggedIn, async (req, res) => {
     res.render('subscriptionForm');
 });
 
+
 router.post('/subscribe', isLoggedIn, async (req, res) => {
     try {
     const { subscriptionType ,subscriptionDuration} = req.body;
@@ -995,8 +996,13 @@ router.post('/subscribe', isLoggedIn, async (req, res) => {
         if (isNaN(amount) || amount <= 0) {
             return res.json(400).send('Invalid payment amount');
         }
-    
 
+        const doctor = await Doctor.findById(doctorId);
+
+        
+        if (doctor.subscriptionType !== 'Free') {
+            return res.status(403).send('You already have an active subscription. You cannot subscribe again until the current plan ends.');
+        }
     
         const session = await stripe.checkout.sessions.create({
             payment_method_types: ['card'],
@@ -1018,7 +1024,7 @@ router.post('/subscribe', isLoggedIn, async (req, res) => {
         req.session.subscriptionInfo = {
             doctorId,
             subscriptionType,
-            subscriptionDuration,  // Store the subscription duration
+            subscriptionDuration,  
             paymentDetails: {
                 amount: amount,
                 currency: 'usd'
@@ -1031,6 +1037,7 @@ router.post('/subscribe', isLoggedIn, async (req, res) => {
         res.json(500).send('Server Error');
     }
     });
+    
     
     router.get('/subscription-success', async (req, res) => {
         try {
