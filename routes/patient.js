@@ -685,7 +685,7 @@ router.get('/priority-blogs', async (req, res) => {
 
         // Find high-priority blogs (featured blogs)
         const featuredBlogs = await Blog.find({ 
-            priority: 'active', 
+            priority: 'high', 
             verificationStatus: 'Verified' 
         }).sort({ createdAt: -1 }).limit(5).lean();
 
