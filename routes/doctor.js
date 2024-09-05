@@ -1062,7 +1062,7 @@ router.post('/subscribe', isLoggedIn, async (req, res) => {
                     { new: true }
                 );
     
-                res.render('subscriptionSuccess', { doctor: updatedDoctor });
+                res.redirect(`${process.env.REACT_URL}/Message`);
             } else {
                 res.status(400).send('Payment was not successful');
             }
