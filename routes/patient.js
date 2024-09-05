@@ -317,8 +317,8 @@ router.post('/book', isLoggedIn, async (req, res) => {
           serviceCharge: serviceCharge.toFixed(2), // Ensure serviceCharge is a number
           totalFee: totalFee.toFixed(2) // Ensure totalFee is a number
       },
-      success_url: `${req.protocol}://${req.get('host')}/patient/book/payment-success?doctorId=${doctorId}&date=${encodeURIComponent(date)}&startTime=${encodeURIComponent(startTime)}&consultationType=${consultationType}&session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${req.protocol}://${req.get('host')}/patient/book/payment-failure`,
+      success_url: `${req.protocol}://${req.get('host')}/api/patient/book/payment-success?doctorId=${doctorId}&date=${encodeURIComponent(date)}&startTime=${encodeURIComponent(startTime)}&consultationType=${consultationType}&session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${req.protocol}://${req.get('host')}/api/patient/book/payment-failure`,
     });
 
     res.json({ url: session.url }); // Updated to return JSON object

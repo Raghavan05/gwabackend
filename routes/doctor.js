@@ -1017,8 +1017,8 @@ router.post('/subscribe', isLoggedIn, async (req, res) => {
                 quantity: 1,
             }],
             mode: 'payment',
-            success_url: `${req.protocol}://${req.get('host')}/doctor/subscription-success?session_id={CHECKOUT_SESSION_ID}`,
-            cancel_url: `${req.protocol}://${req.get('host')}/doctor/subscription-failure`,
+            success_url: `${req.protocol}://${req.get('host')}/api/doctor/subscription-success?session_id={CHECKOUT_SESSION_ID}`,
+            cancel_url: `${req.protocol}://${req.get('host')}/api/doctor/subscription-failure`,
         });
     
         req.session.subscriptionInfo = {
@@ -1062,7 +1062,7 @@ router.post('/subscribe', isLoggedIn, async (req, res) => {
                     { new: true }
                 );
     
-                res.redirect(`${process.env.REACT_URL}/Message`);
+                res.render('subscriptionSuccess', { doctor: updatedDoctor });
             } else {
                 res.status(400).send('Payment was not successful');
             }
