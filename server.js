@@ -10,6 +10,7 @@ const Doctor = require('./models/Doctor');
 const Blog = require('./models/Blog');
 const Patient = require('./models/Patient');
 const Leads=require('./models/Leads');
+const compression = require('compression');
 const cors = require('cors');
 dotenv.config();
 
@@ -20,7 +21,7 @@ require('./slotsDelete');
 
 app.use(express.json({ limit: '50mb' })); 
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
-
+app.use(compression({ threshold: 0 }));
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 app.set('view engine', 'ejs');

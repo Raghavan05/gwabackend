@@ -15,7 +15,8 @@ const Patient = require('../models/Patient');
 const Prescription = require('../models/Prescription');
 const Notification = require('../models/Notification');
 const Insurance = require('../models/Insurance');
-
+const Specialty = require('../models/Specialty');
+const Condition = require('../models/Condition');
 
 require('dotenv').config();
 
@@ -129,16 +130,27 @@ router.get('/profile', isLoggedIn, async (req, res) => {
         const doctorEmail = req.session.user.email;
         const doctor = await Doctor.findOne({ email: doctorEmail }).lean();
         if (!doctor) return res.status(404).send('Doctor not found');
-        
+
         const allInsurances = await Insurance.find({}).select('_id name logo');
         const insurances = await Insurance.find({ '_id': { $in: doctor.insurances } }).select('_id name logo');
         
-        res.json({ doctor, insurances, allInsurances });
+        const allSpecialties = await Specialty.find({}).select('_id name');
+
+        const allConditions = await Condition.find({}).select('_id name');
+
+        res.json({
+            doctor,
+            insurances,
+            allInsurances,
+            allSpecialties,
+            allConditions,
+        });
     } catch (err) {
         console.error(err.message);
         res.status(500).send('Server Error');
     }
 });
+
 
 router.post('/profile/update', isLoggedIn, async (req, res) => {
     try {
@@ -304,7 +316,6 @@ router.post('/profile/update', isLoggedIn, async (req, res) => {
         res.status(500).json({ success: false, message: 'Server Error' });
     }
 });
-
 
 
 
