@@ -255,7 +255,7 @@ router.post('/login', async (req, res) => {
                await Admin.findOne({ email });
 
     if (!user) {
-      return res.status(401).json({ success: false, message: 'Invalid Credentials' });
+      return res.status(401).json({ success: false, message: 'User does not exist' });
     }
 
     if (!user.isVerified) {
@@ -265,7 +265,7 @@ router.post('/login', async (req, res) => {
     const isMatch = await bcrypt.compare(password, user.password);
 
     if (!isMatch) {
-      return res.status(401).json({ success: false, message: 'Invalid Credentials' });
+      return res.status(401).json({ success: false, message: 'Password is incorrect' });
     }
 
     req.session.user = {
