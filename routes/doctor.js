@@ -135,8 +135,12 @@ router.get('/profile', isLoggedIn, async (req, res) => {
         const insurances = await Insurance.find({ '_id': { $in: doctor.insurances } }).select('_id name logo');
         
         const allSpecialties = await Specialty.find({}).select('_id name');
-
         const allConditions = await Condition.find({}).select('_id name');
+
+        // console.log("All Specialties: ", allSpecialties);
+        // console.log("All Conditions: ", allConditions);
+        // console.log(insurances);
+        
 
         res.json({
             doctor,
@@ -151,10 +155,9 @@ router.get('/profile', isLoggedIn, async (req, res) => {
     }
 });
 
-
 router.post('/profile/update', isLoggedIn, async (req, res) => {
     try {
-        console.log('Request body:', req.body);
+        // console.log('Request body:', req.body);
 
         const doctorEmail = req.session.user.email;
         let doctor = await Doctor.findOne({ email: doctorEmail });
@@ -165,7 +168,7 @@ router.post('/profile/update', isLoggedIn, async (req, res) => {
 
         const updateData = {};
 
-   
+        // Profile Picture
         if (req.body.profilePicture) {
             updateData.profilePicture = {
                 data: Buffer.from(req.body.profilePicture.data, 'base64'),
@@ -173,109 +176,69 @@ router.post('/profile/update', isLoggedIn, async (req, res) => {
             };
         }
 
-
-        if (req.body.licenseProof) {
+        // License Proof
+        if (req.body.documents.licenseProof) {
             updateData.documents = updateData.documents || {};
             updateData.documents.licenseProof = {
-                data: Buffer.from(req.body.licenseProof.data, 'base64'),
-                contentType: req.body.licenseProof.contentType,
+                data: Buffer.from(req.body.documents.licenseProof.data, 'base64'),
+                contentType: req.body.documents.licenseProof.contentType,
             };
         }
 
-        if (req.body.certificationProof) {
+        // Certification Proof
+        if (req.body.documents.certificationProof) {
             updateData.documents = updateData.documents || {};
             updateData.documents.certificationProof = {
-                data: Buffer.from(req.body.certificationProof.data, 'base64'),
-                contentType: req.body.certificationProof.contentType,
+                data: Buffer.from(req.body.documents.certificationProof.data, 'base64'),
+                contentType: req.body.documents.certificationProof.contentType,
             };
         }
 
-        if (req.body.businessProof) {
+        // Business Proof
+        if (req.body.documents.businessProof) {
+            console.log("inside business proof")
             updateData.documents = updateData.documents || {};
+            console.log("data exists " + req.body.documents.businessProof.data.length)
             updateData.documents.businessProof = {
-                data: Buffer.from(req.body.businessProof.data, 'base64'),
-                contentType: req.body.businessProof.contentType,
+                data: Buffer.from(req.body.documents.businessProof.data, 'base64'),
+                contentType: req.body.documents.businessProof.contentType,
             };
         }
 
-        
-        if (req.body.name) {
-            updateData.name = req.body.name;
-        }
-        if (req.body.title) {
-            updateData.title = req.body.title;
-        }
-        if (req.body.aboutMe) {
-            updateData.aboutMe = req.body.aboutMe;
-        }
-        if (req.body.dateOfBirth) {
-            updateData.dateOfBirth = req.body.dateOfBirth;
-        }
-        if (req.body.gender) {
-            updateData.gender = req.body.gender;
-        }
-        if (req.body.country) {
-            updateData.country = req.body.country;
-        }
-
-        if (req.body.state) {
-            updateData.state = req.body.state;
-        }
-        if (req.body.cities) {
-            updateData.cities = req.body.cities;
-        }
-
-        if (req.body.availability) {
-            updateData.availability = req.body.availability;
-        }
-        if (req.body.consultation) {
-            updateData.consultation = req.body.consultation;
-        }
-
-        if (req.body.facebook) {
-            updateData.facebook = req.body.facebook;
-        }
-
-        if (req.body.twitter) {
-            updateData.twitter = req.body.twitter;
-        }
-
-        if (req.body.instagram) {
-            updateData.instagram = req.body.instagram;
-        }
-
-        if (req.body.linkedin) {
-            updateData.linkedin = req.body.linkedin;
-        }
-        if (req.body.specialization) {
-            updateData.specialization = req.body.specialization;
-        }
+        // Additional Fields...
+        if (req.body.name) updateData.name = req.body.name;
+        if (req.body.title) updateData.title = req.body.title;
+        if (req.body.aboutMe) updateData.aboutMe = req.body.aboutMe;
+        if (req.body.dateOfBirth) updateData.dateOfBirth = req.body.dateOfBirth;
+        if (req.body.gender) updateData.gender = req.body.gender;
+        if (req.body.country) updateData.country = req.body.country;
+        if (req.body.state) updateData.state = req.body.state;
+        if (req.body.cities) updateData.cities = req.body.cities;
+        if (req.body.availability) updateData.availability = req.body.availability;
+        if (req.body.consultation) updateData.consultation = req.body.consultation;
+        if (req.body.facebook) updateData.facebook = req.body.facebook;
+        if (req.body.twitter) updateData.twitter = req.body.twitter;
+        if (req.body.instagram) updateData.instagram = req.body.instagram;
+        if (req.body.linkedin) updateData.linkedin = req.body.linkedin;
+        if (req.body.specialization) updateData.specialization = req.body.specialization;
         if (req.body.conditions) {
             updateData.conditions = Array.isArray(req.body.conditions) ? req.body.conditions : [req.body.conditions];
         }
         if (req.body.speciality) {
             updateData.speciality = Array.isArray(req.body.speciality) ? req.body.speciality : [req.body.speciality];
         }
-
         if (req.body.languages) {
             updateData.languages = Array.isArray(req.body.languages) ? req.body.languages : [req.body.languages];
         }
-
         if (req.body.insurances) {
             const newInsurances = (Array.isArray(req.body.insurances) ? req.body.insurances : [req.body.insurances]).map(id => id.toString());
             const currentInsurances = new Set(doctor.insurances.map(id => id.toString()));
             newInsurances.forEach(id => currentInsurances.add(id));
             updateData.insurances = Array.from(currentInsurances);
         }
-
         if (req.body.awards) {
             updateData.awards = Array.isArray(req.body.awards) ? req.body.awards : [req.body.awards];
         }
-
-        if (req.body.faqs) {
-            updateData.faqs = Array.isArray(req.body.faqs) ? req.body.faqs : [req.body.faqs];
-        }
-
         if (req.body.hospitals) {
             let hospitals = [];
             if (Array.isArray(req.body.hospitals)) {
@@ -303,12 +266,16 @@ router.post('/profile/update', isLoggedIn, async (req, res) => {
             }
             updateData.hospitals = hospitals;
         }
-
         if (req.body.doctorFee) {
             updateData.doctorFee = parseFloat(req.body.doctorFee);
         }
 
-        doctor = await Doctor.findOneAndUpdate({ email: doctorEmail }, { $set: updateData }, { new: true, runValidators: true });
+        // Update the doctor profile
+        doctor = await Doctor.findOneAndUpdate(
+            { email: doctorEmail },
+            { $set: updateData },
+            { new: true, runValidators: true }
+        );
 
         res.json({ success: true, message: 'Profile updated successfully', doctor });
     } catch (err) {
