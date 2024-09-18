@@ -8,7 +8,7 @@ const bookingSchema = new mongoose.Schema({
     consultationType: {
         type: String,
         enum: ['In-person', 'Video call'],
-        required: true 
+        required: true
     },
     status: {
         type: String,
@@ -24,8 +24,10 @@ const bookingSchema = new mongoose.Schema({
             state: { type: String },
             country: { type: String },
             zip: { type: String }
-        }
-    }
+        },
+    },
+    payment: Number,
+    paid: { type: Boolean, default: false }
 });
 
 module.exports = mongoose.model('Booking', bookingSchema);

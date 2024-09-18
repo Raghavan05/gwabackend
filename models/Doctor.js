@@ -25,37 +25,39 @@ const doctorSchema = new mongoose.Schema({
   speciality: { type: [String], required: true },
   country: String,
   state: String,
-  city: String,
-  zip: String,
+  cities: String,
   location: String,
   gender: String,
   availability: String,
   dateOfBirth: Date,
   bloodGroup: String,
   languages: [String],
-  doctorFee:{type: Number, default: 85},
   doctorFeeCurrency:{type: String, enum: ['usd', 'inr', 'gbp', 'aed']},
+
+  doctorFee:{type: Number, default: 85},
+  zip: String,
   hospitals: [{
-      name: { type: String, required: true },
-      street: { type: String, required: true },
-      city: { type: String, required: true },
-      state: { type: String, required: true },
-      country: { type: String, required: true },
-      zip: { type: String, required: true },
-      lat: { type: Number }, 
-      lng: { type: Number }  
-  }],
-  insurances: [{ type: String}],
+    name: { type: String, },
+    street: { type: String, },
+    city: { type: String,  },
+    state: { type: String, },
+    country: { type: String,  },
+    zip: { type: String, },
+  lat: { type: Number }, 
+  lng: { type: Number }  
+}],
+  insurances: [String],
   consultation: { type: String, enum: ['In-person', 'Video call', 'Both'], default: 'In-person' },
   awards: [String],
   faqs: [faqSchema],  
+
   website: String,
-  socialHandles: {
+
     twitter: String,
     facebook: String,
     linkedin: String,
-    instagram: String
-  },
+    instagram: String,
+
   profilePicture: {
     data: Buffer,
     contentType: String
@@ -89,7 +91,6 @@ const doctorSchema = new mongoose.Schema({
     certificationProof: { data: Buffer, contentType: String },
     businessProof: { data: Buffer, contentType: String }
   },
-  licenseNumber: { type: String },
   trialEndDate: Date,
   maxTimeSlots: {
     type: Number,
