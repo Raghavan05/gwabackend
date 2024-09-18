@@ -492,8 +492,8 @@ router.post('/book', isLoggedIn, async (req, res) => {
           totalFee: totalFee.toFixed(2),
           doctorFeeCurrency: doctorFeeCurrency  
         },
-        success_url: `${req.protocol}://${req.get('host')}/patient/book/payment-success?doctorId=${doctorId}&date=${encodeURIComponent(date)}&startTime=${encodeURIComponent(startTime)}&consultationType=${consultationType}&currency=${currency}&session_id={CHECKOUT_SESSION_ID}`,
-        cancel_url: `${req.protocol}://${req.get('host')}/patient/book/payment-failure`,
+        success_url: `${req.protocol}://${req.get('host')}/api/patient/book/payment-success?doctorId=${doctorId}&date=${encodeURIComponent(date)}&startTime=${encodeURIComponent(startTime)}&consultationType=${consultationType}&currency=${currency}&session_id={CHECKOUT_SESSION_ID}`,
+        cancel_url: `${req.protocol}://${req.get('host')}/api/patient/book/payment-failure`,
       });
       console.log("After stripe")
       console.log(session);
@@ -508,6 +508,66 @@ router.post('/book', isLoggedIn, async (req, res) => {
     res.status(500).send('Server Error');
   }
 });
+
+
+router.get('/book/payment-success', async (req, res) => {
+  try {
+    const { doctorId, date, startTime, consultationType, session_id } = req.query;
+    const patientId = req.session.user._id;
+
+    const session = await stripe.checkout.sessions.retrieve(session_id);
+
+    if (session.payment_status === 'paid') {
+      const doctor = await Doctor.findById(doctorId);
+      const patient = await Patient.findById(patientId);
+      if (!doctor) {
+        return res.status(404).send('Doctor not found');
+      }
+
+      const slotIndex = doctor.timeSlots.findIndex(slot =>
+        slot.date.toISOString() === new Date(date).toISOString() && slot.startTime === startTime
+      );
+      if (slotIndex === -1) {
+        return res.status(400).send('Time slot not found');
+      }
+
+      doctor.timeSlots[slotIndex].status = 'booked';
+
+      let totalFee = doctor.doctorFee;
+      let serviceCharge = 0;
+
+      if (doctor.subscriptionType === 'Standard') {
+        serviceCharge = (3 / 100) * doctor.doctorFee;
+        totalFee -= serviceCharge;
+      }
+
+
+      const booking = new Booking({
+        patient: patientId,
+        doctor: doctorId,
+        date: new Date(date),
+        time: `${doctor.timeSlots[slotIndex].startTime} - ${doctor.timeSlots[slotIndex].endTime}`,
+        consultationType: consultationType,
+        status: 'waiting',
+        payment: totalFee,
+        paid: 'true'
+      });
+
+      await booking.save();
+
+      await sendPatientEmail(patient.email, booking);
+      await sendDoctorEmail(doctor.email, booking);
+
+      res.render('patient-payment-success', { booking });
+    } else {
+      res.status(400).send('Payment not completed');
+    }
+  } catch (error) {
+    console.error('Error processing payment success:', error.message);
+    res.status(500).send('Server Error');
+  }
+});
+
 
 
 router.get('/bookings', isLoggedIn, async (req, res) => {
