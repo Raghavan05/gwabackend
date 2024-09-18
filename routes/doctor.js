@@ -157,7 +157,6 @@ router.get('/profile', isLoggedIn, async (req, res) => {
 
 router.post('/profile/update', isLoggedIn, async (req, res) => {
     try {
-        // console.log('Request body:', req.body);
 
         const doctorEmail = req.session.user.email;
         let doctor = await Doctor.findOne({ email: doctorEmail });
@@ -205,9 +204,13 @@ router.post('/profile/update', isLoggedIn, async (req, res) => {
             };
         }
 
-        // Additional Fields...
+    
         if (req.body.name) updateData.name = req.body.name;
         if (req.body.title) updateData.title = req.body.title;
+        if (req.body.zip) updateData.zip = req.body.zip
+        
+        if (req.body.licenseNumber) updateData.licenseNumber = req.body.licenseNumber
+
         if (req.body.aboutMe) updateData.aboutMe = req.body.aboutMe;
         if (req.body.dateOfBirth) updateData.dateOfBirth = req.body.dateOfBirth;
         if (req.body.gender) updateData.gender = req.body.gender;
@@ -236,9 +239,32 @@ router.post('/profile/update', isLoggedIn, async (req, res) => {
             newInsurances.forEach(id => currentInsurances.add(id));
             updateData.insurances = Array.from(currentInsurances);
         }
+
+
+  
+
+
         if (req.body.awards) {
             updateData.awards = Array.isArray(req.body.awards) ? req.body.awards : [req.body.awards];
         }
+
+        if (req.body.faqs) {
+            let faqs = [];
+            if (Array.isArray(req.body.faqs)) {
+                faqs = req.body.faqs.map((faq) => ({
+                    question: faq.question,
+                    answer: faq.answer
+                }));
+            } else if (req.body.faqs && req.body.faqs.question) {
+                faqs = [{
+                    question: req.body.faqs.question,
+                    answer: req.body.faqs.answer
+                }];
+            }
+            updateData.faqs = faqs; 
+        }
+
+
         if (req.body.hospitals) {
             let hospitals = [];
             if (Array.isArray(req.body.hospitals)) {
@@ -270,7 +296,7 @@ router.post('/profile/update', isLoggedIn, async (req, res) => {
             updateData.doctorFee = parseFloat(req.body.doctorFee);
         }
 
-        // Update the doctor profile
+
         doctor = await Doctor.findOneAndUpdate(
             { email: doctorEmail },
             { $set: updateData },
@@ -283,6 +309,8 @@ router.post('/profile/update', isLoggedIn, async (req, res) => {
         res.status(500).json({ success: false, message: 'Server Error' });
     }
 });
+
+
 
 
 
