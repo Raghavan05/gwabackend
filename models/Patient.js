@@ -30,6 +30,7 @@ const patientSchema = new mongoose.Schema({
         type:String
     },
     dateOfBirth: Date,
+    age : String,
     verificationToken: String,
     isVerified: { type: Boolean, default: false },
     bloodGroup: String,
@@ -37,7 +38,6 @@ const patientSchema = new mongoose.Schema({
     insuranceProvider: String,
     policyNumber: String,
     groupNumber: String,
-    age : String,
     emergencyContacts: [emergencyContactSchema],
     profilePicture: {
         data: Buffer,
@@ -48,6 +48,11 @@ const patientSchema = new mongoose.Schema({
     }],
     resetPasswordToken: String,
     resetPasswordExpires: Date,
+    gender: {
+        type: String,
+        enum: ['Male', 'Female', 'Other'],
+        
+    }
 });
 
 module.exports = mongoose.model('Patient', patientSchema);
