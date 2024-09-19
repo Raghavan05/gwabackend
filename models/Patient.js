@@ -37,6 +37,7 @@ const patientSchema = new mongoose.Schema({
     insuranceProvider: String,
     policyNumber: String,
     groupNumber: String,
+    age : String,
     emergencyContacts: [emergencyContactSchema],
     profilePicture: {
         data: Buffer,
