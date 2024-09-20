@@ -61,36 +61,44 @@ const sendVerificationEmail = async (name, email, token, role) => {
 
   const verificationLink = `${process.env.NODE_URL}/auth/verify-email?token=${token}&role=${role}`;
 
-
   const mailOptions = {
     from: process.env.EMAIL_USER,
     to: email,
     subject: '🎉 Almost There! Verify Your Email to Complete Your Sign-Up 🎉',
     html: `
-      <p>Hi ${name},</p>
-
-      <p>Thank you for signing up with us! We’re thrilled to have you on board and can’t wait for you to explore everything we have in store.</p>
-
-      <p>Before you dive in, we just need one small thing from you: to confirm your email address. This helps us ensure that we’ve got the right contact details for you and keeps your account secure.</p>
-
-      <p>Here’s What You Need to Do:</p>
-
-      <p>Click the Verification Button: Simply click the button below to verify your email address.</p>
-
-      <div style="text-align: center;">
-        <a href="${verificationLink}" style="padding: 10px 20px; color: white; background-color: #007bff; text-decoration: none;">Verify Your Email Address</a>
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 10px;">
+        <h2 style="text-align: center;">
+          <span style="color: #FF7F50;">Welcome to MedxBay!</span> 
+        </h2>
+        
+        <p style="font-size: 16px;">Hi <strong>${name}</strong>,</p>
+  
+        <p style="font-size: 16px;">Thank you for signing up with us! We’re thrilled to have you on board and can’t wait for you to explore everything we have in store.</p>
+  
+        <p style="font-size: 16px;">Before you dive in, we just need one small thing from you: to confirm your email address. This helps us ensure that we’ve got the right contact details for you and keeps your account secure.</p>
+  
+        <h3 style="color: #272848;">Here’s What You Need to Do:</h3>
+  
+        <p style="font-size: 16px;">Click the button below to verify your email address:</p>
+  
+        <div style="text-align: center; margin: 20px 0;">
+          <a href="${verificationLink}" style="padding: 14px 24px; color: white; background-color: #FF7F50; text-decoration: none; border-radius: 5px; font-size: 16px;">Verify Your Email Address</a>
+        </div>
+  
+        <p style="font-size: 16px;">Or, copy and paste this link into your browser:</p>
+        <p style="word-break: break-all; font-size: 16px;"><a href="${verificationLink}" style="color: #272848;">${verificationLink}</a></p>
+  
+        <p style="font-size: 16px;">Once you’ve verified your email, you’ll be all set to access your new account and start exploring. If you have any questions or need assistance, feel free to reach out to our support team—we’re here to help!</p>
+  
+        <p style="font-size: 16px; text-align: center;"><strong>Welcome aboard, and get ready for an amazing experience with MedxBay!</strong></p>
+  
+        <p style="font-size: 16px;">Best regards,</p>
+        <p style="font-size: 16px;"><strong>The MedxBay Team</strong></p>
+  
+        <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
+        
+        <p style="font-size: 14px; color: #777;">P.S. If you didn’t sign up for an account, please disregard this email. No worries—nothing will change if you ignore it.</p>
       </div>
-      <p>Or, Copy and Paste This Link: If the button doesn’t work, copy and paste the following URL into your browser:</p>
-      <p><a href="${verificationLink}">${verificationLink}</a></p>
-
-      <p>Once you’ve verified your email, you’ll be all set to access your new account and start exploring. If you have any questions or need assistance, feel free to reach out to our support team—we’re here to help!</p>
-
-      <p>Welcome aboard, and get ready for an amazing experience with MedXBay!</p>
-
-      <p>Best regards,</p>
-      <p>The MedXBay Team</p>
-
-      <p>P.S. If you didn’t sign up for an account, please disregard this email. No worries—nothing will change if you ignore it.</p>
     `
   };
 
@@ -180,24 +188,32 @@ const sendWelcomeEmail = async (name, email, role) => {
   });
 
   const mailOptions = {
-      from: process.env.EMAIL_USER,
-      to: email,
-      subject: '🎉 Welcome to MedXBay! 🎉',
-      html: `
-          <p>Hi ${name},</p>
-
-          <p>Congratulations! Your email has been successfully verified, and we are delighted to welcome you to the MedXBay family!</p>
-
-          <p>Now that you're all set, you can start exploring our platform. Whether you're a user looking for top-notch medical care or a provider ready to offer your expertise, we are here to support you every step of the way.</p>
-
-          <p>If you have any questions, our support team is always here to help. We're excited to see you thrive on MedXBay!</p>
-
-          <p>Welcome aboard!</p>
-
-          <p>Best regards,</p>
-          <p>The MedXBay Team</p>
-      `
-  };
+    from: process.env.EMAIL_USER,
+    to: email,
+    subject: '🎉 Welcome to MedxBay! 🎉',
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 10px; background-color: #f9f9f9;">
+        <h2 style="color: #FF7F50; text-align: center;">🎉 Welcome to MedxBay! 🎉</h2>
+        
+        <p style="font-size: 16px;">Hi <strong>${name}</strong>,</p>
+  
+        <p style="font-size: 16px;">Congratulations! Your email has been successfully verified, and we are delighted to welcome you to the MedxBay family!</p>
+  
+        <p style="font-size: 16px;">Now that you're all set, you can start exploring our platform. Whether you're a user looking for top-notch medical care or a provider ready to offer your expertise, we are here to support you every step of the way.</p>
+  
+        <p style="font-size: 16px;">If you have any questions, our support team is always here to help. We're excited to see you thrive on MedxBay!</p>
+  
+        <p style="font-size: 16px; text-align: center;"><strong>Welcome aboard!</strong></p>
+  
+        <p style="font-size: 16px;">Best regards,</p>
+        <p style="font-size: 16px;"><strong>The MedxBay Team</strong></p>
+  
+        <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
+  
+        <p style="font-size: 14px; color: #777;">If you have any issues, feel free to contact our support team.</p>
+      </div>
+    `
+  };  
 
   await transporter.sendMail(mailOptions);
 };
@@ -473,8 +489,34 @@ const sendResetPasswordEmail = async (email, resetUrl) => {
   const mailOptions = {
     from: process.env.EMAIL_USER,
     to: email,
-    subject: 'Password Reset',
-    text: `You requested a password reset. Click the following link to reset your password: ${resetUrl}`
+    subject: '🔒 Password Reset Request',
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 10px; background-color: #f9f9f9;">
+        <h2 style="color: #272848; text-align: center;">🔒 Password Reset Request</h2>
+        
+        <p style="font-size: 16px;">Hi <strong>${name}</strong>,</p>
+  
+        <p style="font-size: 16px;">We received a request to reset your password. If you did not request this, please ignore this email.</p>
+  
+        <p style="font-size: 16px;">To reset your password, click the button below:</p>
+  
+        <div style="text-align: center; margin: 20px 0;">
+          <a href="${resetUrl}" style="padding: 14px 24px; color: white; background-color: #FF7F50; text-decoration: none; border-radius: 5px; font-size: 16px;">Reset Your Password</a>
+        </div>
+  
+        <p style="font-size: 16px;">If the button doesn't work, copy and paste the following link into your browser:</p>
+        <p style="word-break: break-all; font-size: 16px;"><a href="${resetUrl}" style="color: #272848;">${resetUrl}</a></p>
+  
+        <p style="font-size: 16px;">For security purposes, this link will expire in 60 minutes.</p>
+  
+        <p style="font-size: 16px;">Best regards,</p>
+        <p style="font-size: 16px;"><strong>The MedxBay Team</strong></p>
+  
+        <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
+  
+        <p style="font-size: 14px; color: #777;">If you didn't request a password reset, please ignore this email. Your account remains safe.</p>
+      </div>
+    `
   };
 
   await transporter.sendMail(mailOptions);

@@ -84,8 +84,26 @@ const sendPatientEmail = async (patientEmail, booking) => {
     const mailOptions = {
       from: process.env.EMAIL_USER,
       to: patientEmail,
-      subject: 'Your Appointment is Booked!',
-      text: `Dear ${patient.name}, your appointment with Dr. ${doctor.name} on ${booking.date.toDateString()} at ${booking.time} has been successfully booked. You will be notified shortly with further updates. Thank you!`
+      subject: '📅 Your Appointment is Booked!',
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 10px; background-color: #F4F7FC;">
+          <h2 style="text-align: center; color: #FF7F50;">Appointment Successfully Booked!</h2>
+          <p style="font-size: 16px; color: #272848;">Dear <strong>${patient.name}</strong>,</p>
+          <p style="font-size: 16px; color: #272848;">Your appointment with <strong>Dr. ${doctor.name}</strong> on <strong>${booking.date.toDateString()}</strong> at <strong>${booking.time}</strong> has been successfully booked.</p>
+          
+          <p style="font-size: 16px; color: #272848;">You will receive a confirmation once Dr. ${doctor.name} confirms the appointment. We will notify you with further updates soon.</p>
+          
+          <p style="font-size: 16px; color: #272848;">If you have any questions or need to reschedule, feel free to contact us.</p>
+          
+          <p style="font-size: 16px; color: #272848;">Thank you for choosing MedxBay!</p>
+          
+          <p style="font-size: 16px; color: #272848;"><strong>Best regards,</strong></p>
+          <p style="font-size: 16px; color: #272848;"><strong>The MedxBay Team</strong></p>
+          
+          <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
+          <p style="font-size: 14px; color: #777;">P.S. If you didn’t schedule this appointment, please contact us immediately.</p>
+        </div>
+      `
     };
 
     await transporter.sendMail(mailOptions);
@@ -106,8 +124,30 @@ const sendDoctorEmail = async (doctorEmail, booking) => {
     const mailOptions = {
       from: process.env.EMAIL_USER,
       to: doctorEmail,
-      subject: 'New Appointment Booked',
-      text: `Dear Dr. ${doctor.name}, you have a new appointment with a patient (${patient.name}) on ${booking.date.toDateString()} at ${booking.time}. Kindly update the status of the booking as soon as possible. Thank you!`
+      subject: '📅 New Appointment Booked with a Patient',
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 10px; background-color: #F4F7FC;">
+          <h2 style="text-align: center; color: #FF7F50;">New Appointment Notification</h2>
+          <p style="font-size: 16px; color: #272848;">Dear Dr. <strong>${doctor.name}</strong>,</p>
+          <p style="font-size: 16px; color: #272848;">You have a new appointment with the following details:</p>
+          
+          <ul style="font-size: 16px; color: #272848; list-style-type: none; padding: 0;">
+            <li><strong>Patient Name:</strong> ${patient.name}</li>
+            <li><strong>Date:</strong> ${booking.date.toDateString()}</li>
+            <li><strong>Time:</strong> ${booking.time}</li>
+          </ul>
+          
+          <p style="font-size: 16px; color: #272848;">Kindly update the status of the booking at your earliest convenience.</p>
+          
+          <p style="font-size: 16px; color: #272848;">Thank you for using MedxBay!</p>
+          
+          <p style="font-size: 16px; color: #272848;"><strong>Best regards,</strong></p>
+          <p style="font-size: 16px; color: #272848;"><strong>The MedxBay Team</strong></p>
+          
+          <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
+          <p style="font-size: 14px; color: #777;">P.S. If you have not scheduled this appointment, please contact support immediately.</p>
+        </div>
+      `
     };
     await transporter.sendMail(mailOptions);
     console.log('Email sent to doctor:', doctorEmail);

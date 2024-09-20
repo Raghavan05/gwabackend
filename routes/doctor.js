@@ -433,62 +433,53 @@ router.post('/bookings/:id', isLoggedIn, async (req, res) => {
             if (status === 'accepted') {
                 if (booking.consultationType === 'Video call') {
                     emailSubject = 'Appointment Confirmation';
-                    emailContent = `<div style="font-family: Helvetica, Arial, sans-serif; min-width: 1000px; overflow: auto; line-height: 2;">
-                                        <div style="margin: 50px auto; width: 70%; padding: 20px 0;">
-                                            <div style="border-bottom: 1px solid #eee;">
-                                                <a href="" style="font-size: 1.4em; color: #00466a; text-decoration: none; font-weight: 600;">MedxBay</a>
-                                            </div>
-                                            <p style="font-size: 1.1em;">Hi ${booking.patient.name},</p>
-                                            <p>Your appointment with Dr. ${doctor.name} on ${booking.date.toDateString()} at ${booking.time} has been confirmed.</p>
-                                            <p>Join the meeting using the following link:</p>
-                                            <a href="${booking.meetingLink}" style="background: #00466a; margin: 0 auto; width: max-content; padding: 0 10px; color: #fff; border-radius: 4px; text-decoration: none;">${booking.meetingLink}</a>
-                                            <p style="font-size: 0.9em;">Best regards,<br />MedxBay Team</p>
-                                            <hr style="border: none; border-top: 1px solid #eee;" />
-                                            <div style="float: right; padding: 8px 0; color: #aaa; font-size: 0.8em; line-height: 1; font-weight: 300;">
-                                                <p>MedxBay</p>
-                                            </div>
+                    emailContent = `<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 10px; background-color: #f9f9f9;">
+                                        <h2 style="color: #FF7F50; text-align: center;">Appointment Confirmation</h2>
+                                        <p style="font-size: 16px;">Hi <strong>${booking.patient.name}</strong>,</p>
+                                        <p style="font-size: 16px;">Your appointment with <strong>Dr. ${doctor.name}</strong> has been confirmed. Here are the details:</p>
+                                        <p style="font-size: 16px;"><strong>Date:</strong> ${booking.date.toDateString()}</p>
+                                        <p style="font-size: 16px;"><strong>Time:</strong> ${booking.time}</p>
+                                        <p style="font-size: 16px;"><strong>Consultation Type:</strong> Video call</p>
+                                        <p style="font-size: 16px;"><strong>Meeting Link:</strong></p>
+                                        <div style="text-align: center; margin: 20px 0;">
+                                            <a href="${booking.meetingLink}" style="padding: 14px 24px; color: white; background-color: #FF7F50; text-decoration: none; border-radius: 5px; font-size: 16px; display: inline-block;">${booking.meetingLink}</a>
                                         </div>
+                                        <p style="font-size: 16px;">Best regards,<br><strong>The MedxBay Team</strong></p>
+                                        <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
                                     </div>`;
                     await sendAppointmentEmail(booking.patient.email, booking.patient.name, emailSubject, emailContent);
 
-                    emailContent = `<div style="font-family: Helvetica, Arial, sans-serif; min-width: 1000px; overflow: auto; line-height: 2;">
-                                        <div style="margin: 50px auto; width: 70%; padding: 20px 0;">
-                                            <div style="border-bottom: 1px solid #eee;">
-                                                <a href="" style="font-size: 1.4em; color: #00466a; text-decoration: none; font-weight: 600;">MedxBay</a>
-                                            </div>
-                                            <p style="font-size: 1.1em;">Hi Dr. ${doctor.name},</p>
-                                            <p>The appointment with ${booking.patient.name} on ${booking.date.toDateString()} at ${booking.time} has been confirmed.</p>
-                                            <p>Join the meeting using the following link:</p>
-                                            <a href="${booking.meetingLink}" style="background: #00466a; margin: 0 auto; width: max-content; padding: 0 10px; color: #fff; border-radius: 4px; text-decoration: none;">${booking.meetingLink}</a>
-                                            <p style="font-size: 0.9em;">Best regards,<br />MedxBay Team</p>
-                                            <hr style="border: none; border-top: 1px solid #eee;" />
-                                            <div style="float: right; padding: 8px 0; color: #aaa; font-size: 0.8em; line-height: 1; font-weight: 300;">
-                                                <p>MedxBay</p>
-
-                                            </div>
-                                        </div>
-                                    </div>`;
+                    emailContent = `<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 10px; background-color: #f9f9f9;">
+                                                        <h2 style="color: #FF7F50; text-align: center;">Appointment Confirmation</h2>
+                                                        <p style="font-size: 16px;">Hi <strong>Dr. ${doctor.name}</strong>,</p>
+                                                        <p style="font-size: 16px;">The appointment with <strong>${booking.patient.name}</strong> has been confirmed. Here are the details:</p>
+                                                        <p style="font-size: 16px;"><strong>Date:</strong> ${booking.date.toDateString()}</p>
+                                                        <p style="font-size: 16px;"><strong>Time:</strong> ${booking.time}</p>
+                                                        <p style="font-size: 16px;"><strong>Consultation Type:</strong> Video call</p>
+                                                        <p style="font-size: 16px;"><strong>Meeting Link:</strong></p>
+                                                        <div style="text-align: center; margin: 20px 0;">
+                                                            <a href="${booking.meetingLink}" style="padding: 14px 24px; color: white; background-color: #FF7F50; text-decoration: none; border-radius: 5px; font-size: 16px; display: inline-block;">${booking.meetingLink}</a>
+                                                        </div>
+                                                        <p style="font-size: 16px;">Best regards,<br><strong>The MedxBay Team</strong></p>
+                                                        <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
+                                                    </div>`;
                     await sendAppointmentEmail(doctor.email, doctor.name, 'Appointment Confirmation Notification', emailContent);
 
                     chatMessage = `Your appointment with Dr. ${doctor.name} on ${booking.date.toDateString()} at ${booking.time} has been confirmed. Join the meeting using the following link: ${booking.meetingLink}`;
                     notificationMessage = `Your appointment with Dr. ${doctor.name} on ${booking.date.toDateString()} at ${booking.time} has been confirmed. Join the meeting using the following link: ${booking.meetingLink}`;
                 } else if (booking.consultationType === 'In-person') {
                     emailSubject = 'Appointment Confirmation';
-                    emailContent = `<div style="font-family: Helvetica, Arial, sans-serif; min-width: 1000px; overflow: auto; line-height: 2;">
-                                        <div style="margin: 50px auto; width: 70%; padding: 20px 0;">
-                                            <div style="border-bottom: 1px solid #eee;">
-                                                <a href="" style="font-size: 1.4em; color: #00466a; text-decoration: none; font-weight: 600;">MedxBay</a>
-                                            </div>
-                                            <p style="font-size: 1.1em;">Hi ${booking.patient.name},</p>
-                                            <p>Your appointment with Dr. ${doctor.name} on ${booking.date.toDateString()} at ${booking.time} has been confirmed.</p>
-                                            <p>Please visit the hospital at ${booking.hospital.name}, ${booking.hospital.location.street}, ${booking.hospital.location.city}, ${booking.hospital.location.state}, ${booking.hospital.location.country}, ${booking.hospital.location.zip}</p>
-                                            <p style="font-size: 0.9em;">Best regards,<br />MedxBay Team</p>
-                                            <hr style="border: none; border-top: 1px solid #eee;" />
-                                            <div style="float: right; padding: 8px 0; color: #aaa; font-size: 0.8em; line-height: 1; font-weight: 300;">
-                                                <p>MedxBay</p>
-
-                                            </div>
-                                        </div>
+                    emailContent = `<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 10px; background-color: #f9f9f9;">
+                                        <h2 style="color: #FF7F50; text-align: center;">Appointment Confirmation</h2>
+                                        <p style="font-size: 16px;">Hi <strong>${booking.patient.name}</strong>,</p>
+                                        <p style="font-size: 16px;">Your appointment with <strong>Dr. ${doctor.name}</strong> has been confirmed. Here are the details:</p>
+                                        <p style="font-size: 16px;"><strong>Date:</strong> ${booking.date.toDateString()}</p>
+                                        <p style="font-size: 16px;"><strong>Time:</strong> ${booking.time}</p>
+                                        <p style="font-size: 16px;"><strong>Consultation Type:</strong> In-person</p>
+                                        <p style="font-size: 16px;"><strong>Place:</strong></p>
+                                        <p style="font-size: 16px;">${booking.hospital.name}, ${booking.hospital.location.street}, ${booking.hospital.location.city}, ${booking.hospital.location.state}, ${booking.hospital.location.country}, ${booking.hospital.location.zip}</p>
+                                        <p style="font-size: 16px;">Best regards,<br><strong>The MedxBay Team</strong></p>
+                                        <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
                                     </div>`;
                     await sendAppointmentEmail(booking.patient.email, booking.patient.name, emailSubject, emailContent);
 
@@ -518,20 +509,12 @@ router.post('/bookings/:id', isLoggedIn, async (req, res) => {
 
             } else if (status === 'rejected') {
                 emailSubject = 'Appointment Rejection';
-                emailContent = `<div style="font-family: Helvetica, Arial, sans-serif; min-width: 1000px; overflow: auto; line-height: 2;">
-                                    <div style="margin: 50px auto; width: 70%; padding: 20px 0;">
-                                        <div style="border-bottom: 1px solid #eee;">
-                                            <a href="" style="font-size: 1.4em; color: #00466a; text-decoration: none; font-weight: 600;">MedxBay</a>
-                                        </div>
-                                        <p style="font-size: 1.1em;">Hi ${booking.patient.name},</p>
-                                        <p>We regret to inform you that your appointment with Dr. ${doctor.name} on ${booking.date.toDateString()} at ${booking.time} has been rejected.</p>
-                                        <p style="font-size: 0.9em;">Best regards,<br />MedxBay Team</p>
-                                        <hr style="border: none; border-top: 1px solid #eee;" />
-                                        <div style="float: right; padding: 8px 0; color: #aaa; font-size: 0.8em; line-height: 1; font-weight: 300;">
-                                            <p>MedxBay</p>
-
-                                        </div>
-                                    </div>
+                emailContent = `<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 10px; background-color: #f9f9f9;">
+                                    <h2 style="color: #FF7F50; text-align: center;">Appointment Rejection</h2>
+                                    <p style="font-size: 16px;">Hi <strong>${booking.patient.name}</strong>,</p>
+                                    <p style="font-size: 16px;">We regret to inform you that your appointment with <strong>Dr. ${doctor.name}</strong> on <strong>${booking.date.toDateString()}</strong> at <strong>${booking.time}</strong> has been rejected.</p>
+                                    <p style="font-size: 16px;">Best regards,<br><strong>The MedxBay Team</strong></p>
+                                    <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
                                 </div>`;
                 await sendAppointmentEmail(booking.patient.email, booking.patient.name, emailSubject, emailContent);
 

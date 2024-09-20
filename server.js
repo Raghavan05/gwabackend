@@ -394,13 +394,41 @@ app.get('/auth/where-options', async (req, res) => {
 
 app.post('/submit-email', async (req, res) => {
   const { email } = req.body;
+
   try {
+
+    const existingSubscription = await Subscriptions.findOne({ email });
+    
+    if (existingSubscription) {
+      return res.status(400).json({ message: 'Email already exists' });
+    }
+
     const subscription = new Subscriptions({ email });
     await subscription.save();
+    
     res.status(200).json({ message: 'Details saved successfully' });
   } catch (error) {
-    console.error('Error saving lead:', error); 
+    console.error('Error saving lead:', error);
     res.status(500).json({ message: 'Error saving lead', error: error.message });
+  }
+});
+
+
+app.post('/submit-lead', async (req, res) => {
+  const { name, email } = req.body;
+  try {
+
+    const existingLead = await Leads.findOne({ email });
+
+    if (existingLead) {
+      return res.status(400).json({ message: 'Email already exists' });
+    }
+
+    const lead = new Leads({ name, email });
+    await lead.save();
+    res.status(200).json({ message: 'Details saved successfully' });
+  } catch (error) {
+    res.status(500).json({ message: 'Error saving lead', error });
   }
 });
 
