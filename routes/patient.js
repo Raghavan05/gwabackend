@@ -18,7 +18,7 @@ const storage = multer.memoryStorage();
 const upload = multer({ storage: storage });
 const nodemailer = require('nodemailer');
 const https = require('https');
-
+const Condition = require('../models/Condition');
 const fetchConversionRates = () => {
   return new Promise((resolve, reject) => {
       const options = {
@@ -861,6 +861,7 @@ router.get('/priority-blogs', async (req, res) => {
     }
   });
 
+  
   router.get('/blogs', async (req, res) => {
     try {
         const { search } = req.query;
@@ -958,6 +959,336 @@ router.get('/priority-blogs', async (req, res) => {
         res.status(500).send('Server Error');
     }
 });
+
+router.get('/blogs/conditions', async (req, res) => {
+  try {
+      const { query } = req; 
+      let conditions;
+
+      if (query.search) {
+          const searchQuery = new RegExp(query.search, 'i'); 
+          conditions = await Condition.find({ name: { $regex: searchQuery } }); 
+      } else {
+          conditions = await Condition.find({});
+      }
+
+      res.json({ conditions });
+  } catch (err) {
+      console.error(err);
+      res.status(500).send('Server Error');
+  }
+});
+router.get('/blogs/conditions/:condition', async (req, res) => {
+  try {
+      const { condition } = req.params;
+
+      const topPriorityBlogs = await Blog.find({ conditions: condition })
+          .sort({ priority: -1 }) 
+          .limit(5);
+
+    
+      const recentBlogs = await Blog.find({ conditions: condition })
+          .sort({ createdAt: -1 })
+          .limit(5);
+
+      const mostReadBlogs = await Blog.find({ conditions: condition })
+          .sort({ readCount: -1 }) 
+          .limit(5);
+
+      const blogsByCategory = await Blog.aggregate([
+          { $match: { conditions: condition } },
+          {
+              $group: {
+                  _id: "$categories",
+                  blogs: { $push: "$$ROOT" }
+              }
+          },
+          {
+              $project: {
+                  _id: 1,
+                  blogs: { $slice: ["$blogs", 6] }
+              }
+          }
+      ]);
+
+      const hashtags = await Blog.aggregate([
+          { $match: { conditions: condition } },
+          { $unwind: "$hashtags" },
+          { $group: { _id: "$hashtags", count: { $sum: 1 } } },
+          { $sort: { count: -1 } }
+      ]);
+
+      const topRatedDoctors = await Doctor.find({ conditions: condition })
+          .sort({ rating: -1 }) 
+          .limit(3);
+
+      res.json({
+          condition,
+          topPriorityBlogs,
+          blogsByCategory,
+          topRatedDoctors,
+          recentBlogs,
+          hashtags,
+          mostReadBlogs
+      });
+  } catch (err) {
+      console.error(err);
+      res.status(500).send('Server Error');
+  }
+});
+router.get('/blogs/conditions/:condition/hashtag/:hashtag', async (req, res) => {
+  try {
+      const { condition, hashtag } = req.params;
+      console.log(hashtag);
+      // Find blogs that match the given condition and hashtag
+      const tag = `#${hashtag}`; 
+      console.log(tag);
+
+      // Find blogs that match the given condition and tag
+      const blogs = await Blog.find({ 
+          conditions: condition,
+          hashtags: tag // Match the tag instead of the hashtag directly
+      }).sort({ createdAt: -1 }); // Sort by createdAt or any other criteria as needed
+
+      // Get top priority blogs related to the condition and tag
+      const topPriorityBlogs = await Blog.find({ 
+          conditions: condition,
+          hashtags: tag  // Match the tag for priority blogs
+      })
+          .sort({ priority: -1 }) 
+          .limit(5);
+      console.log(topPriorityBlogs);
+
+      // Get recent blogs related to the condition and tag
+      const recentBlogs = await Blog.find({ 
+          conditions: condition,
+          hashtags: tag  // Match the tag for recent blogs
+      })
+          .sort({ createdAt: -1 })
+          .limit(5);
+
+      // Get most read blogs related to the condition and tag
+      const mostReadBlogs = await Blog.find({ 
+          conditions: condition,
+          hashtags: tag  // Match the tag for most read blogs
+      })
+          .sort({ readCount: -1 }) 
+          .limit(5);
+
+      // Get blogs by category related to the condition and tag
+      const blogsByCategory = await Blog.aggregate([
+          { $match: { 
+              conditions: condition,
+              hashtags: tag  // Match the tag for category blogs
+          }},
+          {
+              $group: {
+                  _id: "$categories",
+                  blogs: { $push: "$$ROOT" }
+              }
+          },
+          {
+              $project: {
+                  _id: 1,
+                  blogs: { $slice: ["$blogs", 6] }
+              }
+          }
+      ]);
+      const topRatedDoctors = await Doctor.find({ conditions: condition })
+          .sort({ rating: -1 }) 
+          .limit(3);
+
+
+      // Get hashtags for the condition
+      const hashtags = await Blog.aggregate([
+          { $match: { conditions: condition } },
+          { $unwind: "$hashtags" },
+          { $group: { _id: "$hashtags", count: { $sum: 1 } } },
+          { $sort: { count: -1 } }
+      ]);
+
+      // Render the condition-blogs.ejs template with the gathered data
+      res.json({
+          condition,
+          hashtag,
+          blogs,
+          topPriorityBlogs,
+          recentBlogs,
+          mostReadBlogs,
+          blogsByCategory,
+          topRatedDoctors,
+          hashtags
+      });
+  } catch (err) {
+      console.error(err);
+      res.status(500).send('Server Error');
+  }
+});
+router.get('/blogs/category/:category', async (req, res) => {
+  try {
+      const { category } = req.params;
+      const categories = await Blog.distinct('categories');
+      const hashtagsArray = await Blog.distinct('hashtags');
+      const hashtags = hashtagsArray.map(tag => tag.replace('#', ''));
+
+      const blogs = await Blog.find({ 
+          categories: { $in: [category] }, 
+          verificationStatus: 'Verified' 
+      }).exec();
+
+      const featuredBlogs = await Blog.find({ 
+        priority: 'high', 
+        verificationStatus: 'Verified' 
+    }).sort({ createdAt: -1 }).limit(5).lean();
+
+      const recentBlogs = await Blog.find({
+          verificationStatus: 'Verified'
+      }).sort({ createdAt: -1 }).limit(5).exec();
+
+      const mostReadBlogs = await Blog.find({
+          verificationStatus: 'Verified'
+      }).sort({ views: -1 }).limit(5).exec();
+
+      const topRatedDoctors = await Doctor.find({
+          rating: { $gte: 4.5 } 
+      }).sort({ rating: -1 }).limit(5).exec();
+
+      const blogsByCategory = {};
+      for (const category of categories) {
+          blogsByCategory[category] = await Blog.find({ 
+              categories: category, 
+              verificationStatus: 'Verified' 
+          }).sort({ createdAt: -1 }).lean();
+      }
+
+      const categoryCounts = await Blog.aggregate([
+        { $match: { verificationStatus: 'Verified' } },
+        { $unwind: '$categories' },
+        { $group: { _id: '$categories', count: { $sum: 1 } } }
+    ]);
+
+      const hashtagCounts = await Blog.aggregate([
+          { $match: { verificationStatus: 'Verified' } },
+          { $unwind: '$hashtags' },
+          { $group: { _id: '$hashtags', count: { $sum: 1 } } }
+      ]);
+
+      const categoryCountMap = categoryCounts.reduce((map, item) => {
+          map[item._id] = item.count;
+          return map;
+      }, {});
+
+      const hashtagCountMap = hashtagCounts.reduce((map, item) => {
+          const cleanHashtag = item._id.replace('#', ''); 
+          map[cleanHashtag] = item.count;
+          return map;
+      }, {});
+
+      res.json({
+          blogs,
+          filterType: 'Category',
+          filterValue: category,
+          searchQuery: req.query.search || '',
+          user: req.session.user,
+          categoryCounts: categoryCountMap,
+          hashtagCounts: hashtagCountMap,
+          categories,
+          hashtags,
+          featuredBlogs,  
+          recentBlogs,   
+          mostReadBlogs,  
+          topRatedDoctors,
+          blogsByCategory 
+      });
+  } catch (err) {
+      console.error(err.message);
+      res.status(500).send('Server Error');
+  }
+});
+router.get('/blogs/hashtag/:hashtag', async (req, res) => {
+  try {
+      let hashtagParam = req.params.hashtag.replace('#', ''); 
+      const hashtag = `#${hashtagParam}`;
+      const categories = await Blog.distinct('categories');
+      const hashtagsArray = await Blog.distinct('hashtags');
+      const hashtags = hashtagsArray.map(tag => tag.replace('#', ''));
+
+      const blogs = await Blog.find({ 
+          hashtags: { $in: [hashtag] }, 
+          verificationStatus: 'Verified' 
+      }).lean();
+
+      const featuredBlogs = await Blog.find({ 
+          priority: 'high', 
+          verificationStatus: 'Verified' 
+      }).sort({ createdAt: -1 }).limit(5).lean();
+
+      const recentBlogs = await Blog.find({
+          verificationStatus: 'Verified'
+      }).sort({ createdAt: -1 }).limit(5).exec();
+
+      const mostReadBlogs = await Blog.find({
+          verificationStatus: 'Verified'
+      }).sort({ views: -1 }).limit(5).exec();
+
+      const topRatedDoctors = await Doctor.find({
+          rating: { $gte: 4.5 },
+          subscriptionVerification: 'Verified'
+      }).sort({ rating: -1 }).limit(5).exec();
+
+      const blogsByCategory = {};
+      for (const category of categories) {
+          blogsByCategory[category] = await Blog.find({ 
+              categories: category, 
+              verificationStatus: 'Verified' 
+          }).sort({ createdAt: -1 }).lean();
+      }
+
+      const categoryCounts = await Blog.aggregate([
+          { $match: { verificationStatus: 'Verified' } },
+          { $unwind: '$categories' },
+          { $group: { _id: '$categories', count: { $sum: 1 } } }
+      ]);
+
+      const hashtagCounts = await Blog.aggregate([
+          { $match: { verificationStatus: 'Verified' } },
+          { $unwind: '$hashtags' },
+          { $group: { _id: '$hashtags', count: { $sum: 1 } } }
+      ]);
+
+      const categoryCountMap = categoryCounts.reduce((map, item) => {
+          map[item._id] = item.count;
+          return map;
+      }, {});
+
+      const hashtagCountMap = hashtagCounts.reduce((map, item) => {
+          const cleanHashtag = item._id.replace('#', ''); 
+          map[cleanHashtag] = item.count;
+          return map;
+      }, {});
+
+      res.json({
+          blogs,
+          filterType: 'Hashtag',
+          filterValue: hashtagParam,
+          searchQuery: req.query.search || '',
+          user: req.session.user,
+          categoryCounts: categoryCountMap,  
+          hashtagCounts: hashtagCountMap,   
+          categories,        
+          hashtags,          
+          featuredBlogs,      
+          recentBlogs,        
+          mostReadBlogs,      
+          topRatedDoctors,    
+          blogsByCategory    
+      });
+  } catch (err) {
+      console.error(err.message);
+      res.status(500).send('Server Error');
+  }
+});
+
 
 function escapeRegex(text) {
   return text.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, "\\$&");

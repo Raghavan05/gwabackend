@@ -5,7 +5,6 @@ const blogSchema = new Schema({
     title: { type: String, required: true },
     author: { type: String, required: true },
     description: { type: String, required: true },
-    // summary: { type: String, required:   true },
     authorEmail: { type: String, required: true },
     authorTitle: { type: String},
     aboutMe: { type: String},
@@ -43,7 +42,9 @@ const blogSchema = new Schema({
             },
         }
     ],
-    authorId: { type: String }
+    authorId: { type: String },
+    readCount: {type: Number} ,
+    conditions: { type: [String]}
 });
 
 const Blog = mongoose.model('Blog', blogSchema);
