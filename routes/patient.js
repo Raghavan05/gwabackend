@@ -508,7 +508,7 @@ router.post('/book', isLoggedIn, async (req, res) => {
 
       // Redirect to patient's bookings page
       return res.json({status:200, msg:"Success"});
-    } else if (consultationType.toLowerCase() === 'video call') {
+    } else if (consultationType === 'video call') {
       // Fetch conversion rates
       console.log("Inside video call loop")
       const conversionRates = await fetchConversionRates();
