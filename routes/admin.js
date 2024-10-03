@@ -255,18 +255,19 @@ router.post('/view-appointments/:id',/* isLoggedIn,*/ async (req, res) => {
   }
 });
 
-router.get('/view-patients', /*isLoggedIn,*/ async (req, res) => {
+router.get('/view-patients', isLoggedIn, async (req, res) => {
   try {
     const patients = await Patient.find().lean();
-    res.json( { 
+    res.json({
       patients,
-      activePage: 'view-patients'  
+      activePage: 'view-patients'
     });
   } catch (err) {
-    console.error(err.message);
-    res.status(500).send('Server Error');
+    console.error('Error fetching patients:', err.message);
+    res.status(500).json({ error: 'Server Error' });
   }
 });
+
 
 router.get('/edit-patient/:patientId', async (req, res) => {
   try {
@@ -298,7 +299,6 @@ router.post('/update-patient/:patientId', upload.single('profilePicture'), async
       policyNumber: req.body.policyNumber,
       emergencyContacts: req.body.emergencyContacts || [],
     };
-    
 
     if (req.file) {
       updatedData.profilePicture = {
@@ -310,13 +310,13 @@ router.post('/update-patient/:patientId', upload.single('profilePicture'), async
     const updatedPatient = await Patient.findByIdAndUpdate(patientId, updatedData, { new: true });
 
     if (!updatedPatient) {
-      return res.status(404).send('Patient not found');
+      return res.status(404).json({ error: 'Patient not found' });
     }
 
-    res.redirect('/admin/view-patients');
+    res.json({ message: 'Patient updated successfully', updatedPatient });
   } catch (error) {
     console.error('Error updating patient:', error);
-    res.status(500).send('Server error');
+    res.status(500).json({ error: 'Server error' });
   }
 });
 
@@ -332,16 +332,21 @@ router.post('/delete-doctor/:id',/*isLoggedIn,*/ async (req, res) => {
   }
 });
 
-router.post('/delete-patient/:id',/*isLoggedIn,*/ async (req, res) => {
+router.post('/delete-patient/:id', /*isLoggedIn,*/ async (req, res) => {
   try {
-    await Patient.findByIdAndDelete(req.params.id);
-    req.flash('success_msg', 'Patient deleted successfully');
-    res.redirect('/admin/view-patients');
+    const deletedPatient = await Patient.findByIdAndDelete(req.params.id);
+
+    if (!deletedPatient) {
+      return res.status(404).json({ error: 'Patient not found' });
+    }
+
+    res.json({ message: 'Patient deleted successfully' });
   } catch (err) {
     console.error(err.message);
-    res.status(500).send('Server Error');
+    res.status(500).json({ error: 'Server Error' });
   }
 });
+
 
 router.get('/subscriptions',/*isAdmin,*/ async (req, res) => {
   try {
@@ -464,6 +469,21 @@ router.post('/blogs/verify/:id',/* isLoggedIn,*/ async (req, res) => {
       res.status(500).send('Server Error');
   }
 });
+
+
+router.post('/blogs/delete/:id', isLoggedIn, async (req, res) => {
+  try {
+    await Blog.findByIdAndDelete(req.params.id);
+    req.flash('success_msg', 'Blog successfully deleted');
+    res.redirect('/admin/blogs');
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).send('Server Error');
+  }
+});
+
+
+
 router.post('/blogs/edit/:id',/* isLoggedIn,*/ upload.single('image'), async (req, res) => {
   try {
     const { title, description, summary, categories, subcategories, priority, hashtags } = req.body;

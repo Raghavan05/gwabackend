@@ -1301,6 +1301,19 @@ router.post('/blogs/edit/:id', isLoggedIn, checkSubscription, upload.single('ima
     }
 });
 
+
+
+router.post('/profile/blogs/delete/:id', isLoggedIn, async (req, res) => {
+    try {
+        await Blog.findByIdAndDelete(req.params.id);
+        req.flash('success_msg', 'Blog successfully deleted');
+        res.redirect('/doctor/profile/blogs');
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).send('Server Error');
+    }
+});
+
 router.get('/dashboard', isLoggedIn, checkSubscription, async (req, res) => {
     try {
         const doctor = await Doctor.findOne({ email: req.session.user.email }).lean();
