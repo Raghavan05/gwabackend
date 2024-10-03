@@ -6,21 +6,11 @@ const blogSchema = new Schema({
     author: { type: String, required: true },
     description: { type: String, required: true },
     authorEmail: { type: String, required: true },
-    authorTitle: { type: String},
-    aboutMe: { type: String},
-    date: { type: Date, default: Date.now },
     image: {
         data: Buffer,
         contentType: String
     },
-    profilePicture: {
-        data: Buffer,
-        contentType: String 
-    },
     categories: {
-        type: [String]
-    },
-    subcategories: {
         type: [String]
     },
     hashtags: {
@@ -35,14 +25,10 @@ const blogSchema = new Schema({
         {
             username: String,
             comment: String,
-            date: { type: Date, default: Date.now },
-            profilePicture: {
-                data: Buffer,
-                contentType: String
-            },
+            date: { type: Date, default: Date.now }
         }
     ],
-    authorId: { type: String },
+    authorId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
     readCount: {type: Number} ,
     conditions: { type: [String]}
 });

@@ -1089,32 +1089,28 @@ router.get('/subscription-failure', (req, res) => {
     res.send('Subscription payment failed. Please try again.');
 });
 
-
-router.get('/blog', (req, res) => {
-    res.json('blog-upload-form'); 
+router.get('/blog', async (req, res) => {
+    try {
+        const conditions = await Condition.find(); 
+        
+        res.json({ conditions });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ message: 'Server error' });
+    }
 });
+
+
 router.post('/blog', isLoggedIn, checkSubscription, upload.single('image'), async (req, res) => {
     try {
         const authorEmail = req.session.user.email;
-        const { title, author, description, categories, hashtags, priority,subcategories } = req.body;
+        const { title, author, description, category, hashtags, priority, selectedConditions } = req.body;
 
         const doctor = await Doctor.findOne({ email: authorEmail });
 
-        const hashtagsArray = hashtags ? hashtags.split(',').map(tag => tag.trim()) : [];
-
         let authorId = null;
-        let authorTitle = '';
-        let profilePicture = null;
-        let aboutMe = '';
-        
         if (doctor) {
             authorId = doctor._id; 
-            authorTitle = doctor.title;
-            aboutMe=doctor.aboutMe;
-            profilePicture = {
-                data: doctor.profilePicture.data, 
-                contentType: doctor.profilePicture.contentType
-            };
         }
 
         const newBlog = new Blog({
@@ -1122,29 +1118,26 @@ router.post('/blog', isLoggedIn, checkSubscription, upload.single('image'), asyn
             author,
             description,
             authorEmail,
-            authorId, 
-            authorTitle,
-            aboutMe,
-            subcategories:subcategories,
-            profilePicture,
-            categories: categories, 
-            hashtags: hashtagsArray, 
+            authorId,
+            categories: category,
+            hashtags: hashtags,
             priority,
+            conditions: selectedConditions, 
             image: {
                 data: req.file.buffer,
                 contentType: req.file.mimetype
             },
-            verificationStatus: 'Pending' 
+            verificationStatus: 'Pending'
         });
 
         await newBlog.save();
 
-        res.json({ message: 'Blog uploaded successfully' });
+        res.render('blog-success', { message: 'Blog uploaded successfully' });
     } catch (err) {
         console.error(err);
         res.status(500).json({ message: 'Server error' });
     }
-    })
+});
 
 
 router.get('/blogs', isDoctor, isLoggedIn, async (req, res) => {
@@ -1246,43 +1239,36 @@ router.get('/profile/blogs', isLoggedIn, async (req, res) => {
     }
   });
 
-router.get('/blogs/edit/:id', isLoggedIn, async (req, res) => {
+  router.get('/blogs/edit/:id', isLoggedIn, async (req, res) => {
     try {
-      const blog = await Blog.findById(req.params.id);
-  
-      if (!blog) {
-        console.error('Blog not found');
-        return res.status(404).send('Blog not found');
-      }
-  
-      if (!req.session.user || !req.session.user._id) {
-        console.error('Unauthorized: No user session found');
-        return res.status(403).send('Unauthorized');
-      }
-  
-      if (!blog.authorId) {
-        console.error('Blog author ID is not defined');
-        return res.status(403).send('Unauthorized');
-      }
-  
-      if (blog.authorId.toString() !== req.session.user._id.toString()) {
-        return res.status(403).send('Unauthorized');
-      }
-  
-      res.render('edit-blog', { blog });
-    } catch (err) {
-      console.error(err);
-      res.status(500).send('Server Error');
-    }
-  });
-  
-  
-  
+        const blog = await Blog.findById(req.params.id);
+        const conditions = await Condition.find();
 
+        if (!blog) {
+            console.error('Blog not found');
+            return res.status(404).json({ message: 'Blog not found' });
+        }
+
+        if (blog.authorId.toString() !== req.session.user._id.toString()) {
+            return res.status(403).json({ message: 'Unauthorized' });
+        }
+
+        const hashtags = Array.isArray(blog.hashtags) ? blog.hashtags : blog.hashtags.split(',');
+        const categories = Array.isArray(blog.categories) ? blog.categories : blog.categories.split(',');
+
+        return res.json({ blog, conditions, hashtags, categories });
+    } catch (err) {
+        console.error(err);
+        return res.status(500).json({ message: 'Server Error' });
+    }
+});
+  
+  
+  
 router.post('/blogs/edit/:id', isLoggedIn, checkSubscription, upload.single('image'), async (req, res) => {
     try {
         const blog = await Blog.findById(req.params.id);
-
+        
         if (!blog) {
             return res.status(404).send('Blog not found');
         }
@@ -1291,15 +1277,15 @@ router.post('/blogs/edit/:id', isLoggedIn, checkSubscription, upload.single('ima
             return res.status(403).send('Unauthorized');
         }
 
-        const { title, description, summary, categories, hashtags } = req.body;
+        const { title, description, category, hashtags, selectedConditions } = req.body;
 
         blog.title = title;
         blog.description = description;
-        blog.summary = summary;
-        blog.categories = categories.split(',');
-        blog.hashtags = hashtags.split(',');
-     
-        blog.verificationStatus = 'pending';
+        blog.categories = Array.isArray(category) ? category : category;
+        blog.hashtags = Array.isArray(hashtags) ? hashtags : hashtags.split(',');
+        blog.conditions = selectedConditions;
+
+        blog.verificationStatus = 'Pending';
 
         if (req.file) {
             blog.image.data = req.file.buffer;
@@ -1308,7 +1294,7 @@ router.post('/blogs/edit/:id', isLoggedIn, checkSubscription, upload.single('ima
 
         await blog.save();
 
-        res.redirect('/doctor/profile/blogs'); 
+        res.redirect('/doctor/profile/blogs');
     } catch (err) {
         console.error(err);
         res.status(500).send('Server Error');

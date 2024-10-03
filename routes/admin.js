@@ -10,19 +10,28 @@ const Insurance = require('../models/Insurance');
 const Booking = require('../models/Booking');
 const storage = multer.memoryStorage(); 
 const upload = multer({ storage: storage });
+const Condition = require('../models/Condition');
 
 function isLoggedIn(req, res, next) {
   if (req.session.user && req.session.user.role === 'admin') {
+    req.user = req.session.user;
     return next();
   }
-  req.flash('error_msg', 'Please log in to view this resource');
+  
+
+  if (req.headers.accept && req.headers.accept.includes('application/json')) {
+    return res.status(401).json({ error: 'Unauthorized. Please log in.' });
+  }
+  
+
   res.redirect('/auth/login');
 }
+
 function isAdmin(req, res, next) {
   if (req.session.user && req.session.user.role === 'admin') {
       return next();
   }
-  res.status(403).send('Access denied.');
+  res.status(403).json('Access denied.');
 };
 
 router.get('/admin-home', async (req, res) => {
@@ -492,36 +501,38 @@ router.post('/blogs/edit/:id',/* isLoggedIn,*/ upload.single('image'), async (re
 });
 router.get('/blog', isLoggedIn, async (req, res) => {
   try {
-      const doctors = await Doctor.find(); // Fetch all doctors
-      const admin = await Admin.findOne({ email: req.session.user.email }); // Fetch the logged-in admin
+      const doctors = await Doctor.find(); 
+      const admin = await Admin.findOne({ email: req.session.user.email }); 
+      const conditions = await Condition.find(); 
 
       if (!admin) {
-          return res.status(403).send('Unauthorized');
+          return res.status(403).json({ error: 'Unauthorized' });
       }
 
-      res.render('admin-blog-upload-form', { activePage: 'blog-upload', doctors, admin });
+      res.json({
+          doctors,
+          admin,
+          conditions
+      });
   } catch (err) {
       console.error(err);
-      res.status(500).send('Server Error');
+      res.status(500).json({ error: 'Server Error' });
   }
 });
+
+
 router.post('/blog-all', upload.single('image'), async (req, res) => {
   try {
-      // const { title, description, summary, categories, subcategories, hashtags, priority, authorId } = req.body;
-      const { title, description, summary, categories, subcategories, hashtags, priority } = req.body;
-      //hardcoding
-      let authorId = '666c6fc2f5128b4bd484b5d1';
+      const { title, description, categories, hashtags, priority, authorId, selectedConditions } = req.body;
 
       let author = null;
       let authorEmail = null;
 
-      // Determine if the selected author is a doctor or admin
       const doctor = await Doctor.findById(authorId);
       if (doctor) {
           author = doctor.name;
           authorEmail = doctor.email;
       } else {
-          // const admin = await Admin.findById(authorId);
           const admin = await Admin.findById(authorId);
           if (admin) {
               author = admin.name;
@@ -537,18 +548,17 @@ router.post('/blog-all', upload.single('image'), async (req, res) => {
           title,
           author,
           description,
-          summary,
           authorEmail,
           authorId, 
           categories,
-          subcategories: subcategories, 
-          hashtags, 
+          conditions: selectedConditions,
+          hashtags,
           priority,
           image: {
               data: req.file.buffer,
               contentType: req.file.mimetype
           },
-          verificationStatus: 'Pending' 
+          verificationStatus: 'Verified' 
       });
 
       await newBlog.save();
