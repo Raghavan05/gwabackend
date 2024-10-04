@@ -19,6 +19,7 @@ const upload = multer({ storage: storage });
 const nodemailer = require('nodemailer');
 const https = require('https');
 const Condition = require('../models/Condition');
+
 const fetchConversionRates = () => {
   return new Promise((resolve, reject) => {
       const options = {
@@ -508,7 +509,7 @@ router.post('/book', isLoggedIn, async (req, res) => {
 
       // Redirect to patient's bookings page
       return res.json({status:200, msg:"Success"});
-    } else if (consultationType === 'video call') {
+    } else if (consultationType.toLowerCase() === 'video call') {
       // Fetch conversion rates
       console.log("Inside video call loop")
       const conversionRates = await fetchConversionRates();
@@ -797,10 +798,28 @@ router.get('/blogs/view/:id', async (req, res) => {
   }
 });
 
+router.get('/blogs/conditions/:condition/all', async (req, res) => {
+  try {
+      const { condition } = req.params;
 
+      // Fetch all blogs for the given condition
+      const allBlogs = await Blog.find({ conditions: condition }).sort({ createdAt: -1 });
 
+      // Optional: Add a condition description if applicable
+      const conditionDescription = "Description of the condition"; // Modify this as per your requirements
 
-router.post('/blogs/comment/:id', isLoggedIn, async (req, res) => {
+      res.render('all-condition-blogs', {
+          condition,
+          conditionDescription, // Pass the condition description to the template
+          allBlogs,
+      });
+  } catch (err) {
+      console.error(err);
+      res.status(500).send('Server Error');
+  }
+});
+
+router.post('/blogs/comment/:id', isLoggedIn,async (req, res) => {
   try {
       const { comment } = req.body;
       const blogId = req.params.id;
@@ -809,22 +828,122 @@ router.post('/blogs/comment/:id', isLoggedIn, async (req, res) => {
       if (!blog) {
           return res.status(404).send('Blog not found');
       }
-      console.log(req.session.user.name)
+
+      const user = req.session.user;
+
+      // Ensure the user has a profile picture
+      let profilePicture = null;
+      if (user && user.profilePicture) {
+          profilePicture = {
+              data: user.profilePicture.data, 
+              contentType: user.profilePicture.contentType
+          };
+      }
+
       blog.comments.push({
-          username: req.session.user.name, 
-          comment: comment
+          username: user.name,
+          comment: comment// This can be null or the image object
       });
 
       await blog.save();
 
       req.flash('success_msg', 'Comment added successfully');
-      res.redirect(`/patient/blogs/view/${blogId}`);
+      return res.status(200).json({ success: true, message: 'Comment added successfully' });
   } catch (err) {
       console.error(err.message);
       res.status(500).send('Server Error');
   }
 });
 
+
+router.post('/blogs/comment/:blogId',isLoggedIn, async (req, res) => {
+  try {
+      const { comment } = req.body;
+      const { blogId } = req.params;
+
+      const blog = await Blog.findById(blogId);
+      if (!blog) {
+          return res.status(404).send('Blog not found');
+      }
+
+      const user = req.session.user;
+
+      if (!user || !user.name) {
+          req.flash('error_msg', 'User not logged in or username not found.');
+          return res.redirect(`/patient/blogs/view/${blogId}`);
+      }
+
+      blog.comments.push({
+          username: user.name,
+          comment: comment,
+          timestamp: Date.now() 
+      });
+
+      await blog.save();
+
+      req.flash('success_msg', 'Comment added successfully');
+      return res.status(200).json({ success: true, message: 'Comment added successfully' });
+  } catch (err) {
+      console.error(err.message);
+      res.status(500).send('Server Error');
+  }
+});
+
+
+router.post('/blogs/comment/:blogId/reply/:commentId',isLoggedIn, async (req, res) => {
+  try {
+      const { reply } = req.body;
+      const { blogId, commentId } = req.params;
+
+      const blog = await Blog.findById(blogId);
+      if (!blog) {
+          return res.status(404).send('Blog not found');
+      }
+
+      const comment = blog.comments.id(commentId);
+      if (!comment) {
+          return res.status(404).send('Comment not found');
+      }
+
+      const user = req.session.user;
+
+      if (!user || !user.name) {
+          req.flash('error_msg', 'User not logged in or username not found.');
+          return res.redirect(`/patient/blogs/view/${blogId}`);
+      }
+
+      comment.replies.push({
+          username: user.name,
+          reply: reply,
+          timestamp: Date.now() 
+      });
+
+      await blog.save();
+
+      req.flash('success_msg', 'Reply added successfully');
+      return res.status(200).json({ success: true, message: 'Reply added successfully' });
+  } catch (err) {
+      console.error(err.message);
+      res.status(500).send('Server Error');
+  }
+});
+router.get('/blogs/conditions/:condition/category/:category', async (req, res) => {
+  try {
+      const { condition, category } = req.params;
+
+      // Find all blogs under the specified condition and category
+      const categoryBlogs = await Blog.find({
+          conditions: condition,
+          categories: category
+      }).sort({ createdAt: -1 }); // Optionally sort the blogs
+
+      // Render a separate view or the same view with category blogs
+      res.json({ conditionName: condition, categoryName:category, blogs: categoryBlogs });
+  } catch (err) {
+      console.error(err);
+      res.status(500).send('Server Error');
+  }
+});
 router.get('/author/:id', async (req, res) => {
   try {
     const authorId = req.params.id;
@@ -841,7 +960,7 @@ router.get('/author/:id', async (req, res) => {
 
     const blogCount = await Blog.countDocuments({ authorId });
 
-    res.render('author-info', {
+    res.json({
       author,
       blogCount
     });
@@ -861,7 +980,6 @@ router.get('/priority-blogs', async (req, res) => {
     }
   });
 
-  
   router.get('/blogs', async (req, res) => {
     try {
         const { search } = req.query;
@@ -962,55 +1080,92 @@ router.get('/priority-blogs', async (req, res) => {
 
 router.get('/blogs/conditions', async (req, res) => {
   try {
-      const { query } = req; 
+      const { query } = req;
       let conditions;
 
+      const categories = await Blog.distinct('conditions');
+
+      const categoryCountMap = await Blog.aggregate([
+          { $match: { verificationStatus: 'Verified' } },
+          { $unwind: '$conditions' },
+          { $group: { _id: '$conditions', count: { $sum: 1 } } },
+          { $project: { _id: 1, count: 1 } }
+      ]).exec();
+
+      const categoryCountMapObj = categoryCountMap.reduce((acc, curr) => {
+          acc[curr._id] = curr.count;
+          return acc;
+      }, {});
+
       if (query.search) {
-          const searchQuery = new RegExp(query.search, 'i'); 
-          conditions = await Condition.find({ name: { $regex: searchQuery } }); 
+          const searchQuery = new RegExp(query.search, 'i');
+          conditions = categories.filter(condition => searchQuery.test(condition));
       } else {
-          conditions = await Condition.find({});
+          conditions = categories; 
       }
 
-      res.json({ conditions });
+      if (req.xhr) {
+          let htmlContent = '';
+          conditions.forEach(condition => {
+              htmlContent += `
+                  <li>
+                      <a href="/patient/blogs/conditions/${condition}">
+                          ${condition} (${categoryCountMapObj[condition] || 0})
+                      </a>
+                  </li>
+              `;
+          });
+          return res.send(htmlContent); 
+      }
+
+      res.json({ conditions, categoryCountMapObj });
   } catch (err) {
       console.error(err);
       res.status(500).send('Server Error');
   }
 });
+
 router.get('/blogs/conditions/:condition', async (req, res) => {
   try {
       const { condition } = req.params;
 
+      // Fetch top 5 priority blogs for the given condition
       const topPriorityBlogs = await Blog.find({ conditions: condition })
-          .sort({ priority: -1 }) 
+          .sort({ priority: -1 })
           .limit(5);
 
-    
+      // Fetch first 5 recent blogs
       const recentBlogs = await Blog.find({ conditions: condition })
           .sort({ createdAt: -1 })
           .limit(5);
 
+      // Fetch first 5 most-read blogs
       const mostReadBlogs = await Blog.find({ conditions: condition })
-          .sort({ readCount: -1 }) 
+          .sort({ readCount: -1 })
           .limit(5);
 
+      // Fetch blogs grouped by categories, showing only 3 categories
       const blogsByCategory = await Blog.aggregate([
           { $match: { conditions: condition } },
           {
               $group: {
                   _id: "$categories",
-                  blogs: { $push: "$$ROOT" }
+                  blogs: { $push: "$$ROOT" },
+                  totalBlogs: { $sum: 1 } // Count the total blogs in each category
               }
           },
           {
               $project: {
                   _id: 1,
-                  blogs: { $slice: ["$blogs", 6] }
+                  blogs: { $slice: ["$blogs", 6] }, // Limit to 6 blogs per category
+                  totalBlogs: 1,
+                  showAll: { $cond: { if: { $gt: ["$totalBlogs", 3] }, then: true, else: false } }
               }
-          }
+          },
+          { $limit: 3 } // Show only 3 categories
       ]);
 
+      // Aggregate and count hashtags
       const hashtags = await Blog.aggregate([
           { $match: { conditions: condition } },
           { $unwind: "$hashtags" },
@@ -1018,18 +1173,55 @@ router.get('/blogs/conditions/:condition', async (req, res) => {
           { $sort: { count: -1 } }
       ]);
 
-      const topRatedDoctors = await Doctor.find({ conditions: condition })
-          .sort({ rating: -1 }) 
-          .limit(3);
-
       res.json({
           condition,
           topPriorityBlogs,
-          blogsByCategory,
-          topRatedDoctors,
           recentBlogs,
+          mostReadBlogs,
+          blogsByCategory,
           hashtags,
-          mostReadBlogs
+          showAllRecent: true, // Flag to display "Show All" link for Recent Blogs
+          showAllMostRead: true // Flag to display "Show All" link for Most Read Blogs
+      });
+  } catch (err) {
+      console.error(err);
+      res.status(500).send('Server Error');
+  }
+});
+
+// Route for showing all recent blogs under a specific condition
+router.get('/blogs/conditions/:condition/recent-blogs', async (req, res) => {
+  try {
+      const { condition } = req.params;
+
+      // Fetch all recent blogs for the given condition
+      const allRecentBlogs = await Blog.find({ conditions: condition })
+          .sort({ createdAt: -1 });
+
+      res.json({
+          condition,
+          blogs: allRecentBlogs,
+          title: 'All Recent Blogs'
+      });
+  } catch (err) {
+      console.error(err);
+      res.status(500).send('Server Error');
+  }
+});
+
+// Route for showing all most-read blogs under a specific condition
+router.get('/blogs/conditions/:condition/most-read-blogs', async (req, res) => {
+  try {
+      const { condition } = req.params;
+
+      // Fetch all most-read blogs for the given condition
+      const allMostReadBlogs = await Blog.find({ conditions: condition })
+          .sort({ readCount: -1 });
+
+      res.json({
+          condition,
+          blogs: allMostReadBlogs,
+          title: 'All Most Read Blogs'
       });
   } catch (err) {
       console.error(err);
@@ -1040,46 +1232,40 @@ router.get('/blogs/conditions/:condition/hashtag/:hashtag', async (req, res) => 
   try {
       const { condition, hashtag } = req.params;
       console.log(hashtag);
-      // Find blogs that match the given condition and hashtag
       const tag = `#${hashtag}`; 
       console.log(tag);
 
-      // Find blogs that match the given condition and tag
       const blogs = await Blog.find({ 
           conditions: condition,
-          hashtags: tag // Match the tag instead of the hashtag directly
-      }).sort({ createdAt: -1 }); // Sort by createdAt or any other criteria as needed
+          hashtags: tag 
+      }).sort({ createdAt: -1 });
 
-      // Get top priority blogs related to the condition and tag
       const topPriorityBlogs = await Blog.find({ 
           conditions: condition,
-          hashtags: tag  // Match the tag for priority blogs
+          hashtags: tag  
       })
           .sort({ priority: -1 }) 
           .limit(5);
       console.log(topPriorityBlogs);
 
-      // Get recent blogs related to the condition and tag
       const recentBlogs = await Blog.find({ 
           conditions: condition,
-          hashtags: tag  // Match the tag for recent blogs
+          hashtags: tag  
       })
           .sort({ createdAt: -1 })
           .limit(5);
 
-      // Get most read blogs related to the condition and tag
       const mostReadBlogs = await Blog.find({ 
           conditions: condition,
-          hashtags: tag  // Match the tag for most read blogs
+          hashtags: tag  
       })
           .sort({ readCount: -1 }) 
           .limit(5);
 
-      // Get blogs by category related to the condition and tag
       const blogsByCategory = await Blog.aggregate([
           { $match: { 
               conditions: condition,
-              hashtags: tag  // Match the tag for category blogs
+              hashtags: tag  
           }},
           {
               $group: {
@@ -1099,7 +1285,6 @@ router.get('/blogs/conditions/:condition/hashtag/:hashtag', async (req, res) => 
           .limit(3);
 
 
-      // Get hashtags for the condition
       const hashtags = await Blog.aggregate([
           { $match: { conditions: condition } },
           { $unwind: "$hashtags" },
@@ -1107,7 +1292,6 @@ router.get('/blogs/conditions/:condition/hashtag/:hashtag', async (req, res) => 
           { $sort: { count: -1 } }
       ]);
 
-      // Render the condition-blogs.ejs template with the gathered data
       res.json({
           condition,
           hashtag,
@@ -1205,6 +1389,7 @@ router.get('/blogs/category/:category', async (req, res) => {
       res.status(500).send('Server Error');
   }
 });
+
 router.get('/blogs/hashtag/:hashtag', async (req, res) => {
   try {
       let hashtagParam = req.params.hashtag.replace('#', ''); 
