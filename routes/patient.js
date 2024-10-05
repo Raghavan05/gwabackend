@@ -19,8 +19,8 @@ const upload = multer({ storage: storage });
 const nodemailer = require('nodemailer');
 const https = require('https');
 const Condition = require('../models/Condition');
-
-const fetchConversionRates = () => {
+const NewsRelease = require('../models/NewsRelease');  
+const NewsLogo = require('../models/NewsLogo');const fetchConversionRates = () => {
   return new Promise((resolve, reject) => {
       const options = {
           method: 'GET',
@@ -1876,6 +1876,21 @@ router.post('/notifications/:id/delete', isLoggedIn, async (req, res) => {
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Server Error' });
+  }
+});
+
+router.get('/news-releases', async (req, res) => {
+  try {
+    const newsReleases = await NewsRelease.find().sort({ date: -1 }); 
+    const logos = await NewsLogo.find();
+    
+    res.json({
+      newsReleases,
+      logos
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Server Error' });
   }
 });
 
