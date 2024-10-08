@@ -1172,6 +1172,9 @@ router.get('/blogs/conditions/:condition', async (req, res) => {
           { $group: { _id: "$hashtags", count: { $sum: 1 } } },
           { $sort: { count: -1 } }
       ]);
+      const topRatedDoctors = await Doctor.find({ conditions: condition })
+          .sort({ rating: -1 }) 
+          .limit(3);
 
       res.json({
           condition,
@@ -1179,6 +1182,7 @@ router.get('/blogs/conditions/:condition', async (req, res) => {
           recentBlogs,
           mostReadBlogs,
           blogsByCategory,
+          topRatedDoctors,
           hashtags,
           showAllRecent: true, // Flag to display "Show All" link for Recent Blogs
           showAllMostRead: true // Flag to display "Show All" link for Most Read Blogs
