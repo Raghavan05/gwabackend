@@ -192,26 +192,40 @@ const sendWelcomeEmail = async (name, email, role) => {
     to: email,
     subject: '🎉 Welcome to MedxBay! 🎉',
     html: `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 10px; background-color: #f9f9f9;">
-        <h2 style="color: #FF7F50; text-align: center;">🎉 Welcome to MedxBay! 🎉</h2>
-        
-        <p style="font-size: 16px;">Hi <strong>${name}</strong>,</p>
-  
-        <p style="font-size: 16px;">Congratulations! Your email has been successfully verified, and we are delighted to welcome you to the MedxBay family!</p>
-  
-        <p style="font-size: 16px;">Now that you're all set, you can start exploring our platform. Whether you're a user looking for top-notch medical care or a provider ready to offer your expertise, we are here to support you every step of the way.</p>
-  
-        <p style="font-size: 16px;">If you have any questions, our support team is always here to help. We're excited to see you thrive on MedxBay!</p>
-  
-        <p style="font-size: 16px; text-align: center;"><strong>Welcome aboard!</strong></p>
-  
-        <p style="font-size: 16px;">Best regards,</p>
-        <p style="font-size: 16px;"><strong>The MedxBay Team</strong></p>
-  
-        <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
-  
-        <p style="font-size: 14px; color: #777;">If you have any issues, feel free to contact our support team.</p>
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 10px; background-color: #f9f9f9;">
+      <h2 style="color: #FF7F50; text-align: center;">🎉 Welcome to MedxBay! 🎉</h2>
+      
+      <p style="font-size: 16px;">Hi <strong>${name}</strong>,</p>
+
+      <p style="font-size: 16px;">Congratulations! Your email has been successfully verified, and we are delighted to welcome you to the MedxBay family!</p>
+
+      <p style="font-size: 16px;">Now that you're all set, you can start exploring our platform. Whether you're a user looking for top-notch medical care or a provider ready to offer your expertise, we are here to support you every step of the way.</p>
+
+      <!-- Custom Design for Community Invitation (Without Background Color) -->
+      <div style="padding: 20px; margin: 20px 0;">
+        <h3 style="color: #FF7F50; text-align: center;">🌟 Join the MedxBay Community! 🌟</h3>
+        <p style="font-size: 16px; color: #333333; text-align: center; font-weight: bold;">
+          We invite you to be a part of our growing community of healthcare professionals and users. Sign up using the exclusive invitation link below:
+        </p>
+        <p style="text-align: center; margin: 20px 0;">
+          <a href="https://community.medxbay.com/auth/join/bs8YE5y4XWcs6Sq8XLmrE" 
+             style="background-color: #0067FF; color: #ffffff; padding: 10px 20px; text-decoration: none; font-size: 16px; border-radius: 5px; font-weight: bold; display: inline-block;">
+            Join MedxBay Community
+          </a>
+        </p>
       </div>
+
+      <p style="font-size: 16px;">If you have any questions, our support team is always here to help. We're excited to see you thrive on MedxBay!</p>
+
+      <p style="font-size: 16px; text-align: center;"><strong>Welcome aboard!</strong></p>
+
+      <p style="font-size: 16px;">Best regards,</p>
+      <p style="font-size: 16px;"><strong>The MedxBay Team</strong></p>
+
+      <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
+
+      <p style="font-size: 14px; color: #777;">If you have any issues, feel free to contact our support team.</p>
+    </div>
     `
   };  
 
