@@ -1000,6 +1000,8 @@ router.get('/subscribe', isLoggedIn, async (req, res) => {
 router.post('/subscribe', isLoggedIn, async (req, res) => {
     try {
     const { subscriptionType ,subscriptionDuration} = req.body;
+    console.log(req.body);
+    
     const paymentDetails = req.body.paymentDetails;
     const doctorId = req.session.user._id; 
     const amount = parseInt(paymentDetails.amount, 10);
@@ -1103,26 +1105,24 @@ router.get('/blog', async (req, res) => {
 
 router.post('/blog', isLoggedIn, checkSubscription, upload.single('image'), async (req, res) => {
     try {
-        const authorEmail = req.session.user.email;
-        const { title, author, description, category, hashtags, priority, selectedConditions } = req.body;
+        const authorEmail = req.session.user.email;  
+        const { title, description, category, hashtags, priority, selectedConditions } = req.body;
 
         const doctor = await Doctor.findOne({ email: authorEmail });
 
-        let authorId = null;
-        if (doctor) {
-            authorId = doctor._id; 
-        }
+        let authorId = doctor._id;
+        let authorName = doctor.name; 
 
         const newBlog = new Blog({
             title,
-            author,
+            author: authorName, 
             description,
-            authorEmail,
-            authorId,
+            authorEmail,  
+            authorId,  
             categories: category,
             hashtags: hashtags,
             priority,
-            conditions: selectedConditions, 
+            conditions: selectedConditions,  
             image: {
                 data: req.file.buffer,
                 contentType: req.file.mimetype
@@ -1132,7 +1132,11 @@ router.post('/blog', isLoggedIn, checkSubscription, upload.single('image'), asyn
 
         await newBlog.save();
 
-        res.render('blog-success', { message: 'Blog uploaded successfully' });
+        res.json({
+            status: 'success',
+            message: 'Blog uploaded successfully'
+        });
+
     } catch (err) {
         console.error(err);
         res.status(500).json({ message: 'Server error' });
