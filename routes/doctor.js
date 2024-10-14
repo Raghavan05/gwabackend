@@ -738,11 +738,9 @@ router.get('/manage-time-slots', isLoggedIn, checkSubscription, async (req, res)
                 'July', 'August', 'September', 'October', 'November', 'December'
             ]
         };
-        if (req.headers.accept && req.headers.accept.includes('application/json')) {
+        
             res.json(data);
-        } else {
-            res.render('manageTimeSlots', data);
-        }
+        
     } catch (err) {
         console.error(err.message);
         res.status(500).send('Server Error');
