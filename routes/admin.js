@@ -1078,4 +1078,28 @@ router.get('/insights', async (req, res) => {
       res.status(500).send('Server Error');
   }
 });
+
+router.get('/commission-fee', async (req, res) => {
+  try {
+      const doctor = await Doctor.findOne({ adminCommissionFee: { $exists: true, $ne: null } }, 'adminCommissionFee');
+      const currentCommissionFee = doctor ? doctor.adminCommissionFee : null; 
+
+      res.json({currentCommissionFee });
+  } catch (error) {
+      console.error('Error fetching doctor records:', error);
+      res.status(500).send('Server error');
+  }
+});
+
+
+router.post('/commission-fee', async (req, res) => {
+  const { adminCommissionFee } = req.body;
+  try {
+    await Doctor.updateMany({}, { $set: { adminCommissionFee: adminCommissionFee } });
+    res.json({ message: 'Commission fee updated successfully' });
+  } catch (error) {
+    console.error('Error updating commission fee:', error);
+    res.status(500).send('Server error');
+  }
+});
 module.exports = router;
