@@ -1012,7 +1012,7 @@ router.post('/subscribe', isLoggedIn, async (req, res) => {
         const doctor = await Doctor.findById(doctorId);
 
         
-        if (doctor.subscriptionType !== 'Free') {
+        if (doctor.subscriptionType !== 'Standard') {
             return res.status(403).send('You already have an active subscription. You cannot subscribe again until the current plan ends.');
         }
     

@@ -594,11 +594,13 @@ router.get('/book/payment-success', async (req, res) => {
       let totalFee = doctor.doctorFee;
       let serviceCharge = 0;
 
-      if (doctor.subscriptionType === 'Standard') {
-        serviceCharge = (3 / 100) * doctor.doctorFee;
+      if (doctor.subscriptionType === 'Standard' && doctor.adminCommissionFee) {
+        serviceCharge = (doctor.adminCommissionFee / 100) * doctor.doctorFee;
         totalFee -= serviceCharge;
       }
 
+      doctor.serviceCharge = (doctor.serviceCharge || 0) + serviceCharge; 
+      doctor.totalDoctorFee = (doctor.totalDoctorFee || 0) + totalFee; 
 
       const booking = new Booking({
         patient: patientId,
