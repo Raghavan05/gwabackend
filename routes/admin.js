@@ -11,6 +11,7 @@ const Booking = require('../models/Booking');
 const storage = multer.memoryStorage(); 
 const upload = multer({ storage: storage });
 const Condition = require('../models/Condition');
+const nodemailer = require('nodemailer');
 
 function isLoggedIn(req, res, next) {
   if (req.session.user && req.session.user.role === 'admin') {
@@ -33,6 +34,14 @@ function isAdmin(req, res, next) {
   }
   res.status(403).json('Access denied.');
 };
+
+const transporter = nodemailer.createTransport({
+  service: 'gmail', 
+  auth: {
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASSWORD
+}
+});
 
 router.get('/admin-home', async (req, res) => {
   try {
@@ -94,10 +103,10 @@ router.get('/view/:id', /* isLoggedIn,*/ async (req, res) => {
 });
 
 
-router.post('/verify/:id',/* isLoggedIn,*/ async (req, res) => {
+router.post('/verify/:id', isLoggedIn, async (req, res) => {
   try {
     const doctorId = req.params.id;
-    const { verificationStatus } = req.body;
+    const { verificationStatus, reason, trialPeriod, maxTimeSlots, commissionFee } = req.body;
 
     if (!['Verified', 'Pending', 'Not Verified'].includes(verificationStatus)) {
       return res.status(400).send('Invalid verification status');
@@ -110,9 +119,33 @@ router.post('/verify/:id',/* isLoggedIn,*/ async (req, res) => {
     }
 
     doctor.verified = verificationStatus;
+
+    if (verificationStatus === 'Verified') {
+      const customTrialPeriod = parseInt(trialPeriod) || 60;
+      const customMaxTimeSlots = parseInt(maxTimeSlots) || 3;
+      const adminCommissionFee = parseFloat(commissionFee) || 10; // Default commission fee to 10%
+
+      doctor.subscriptionVerification = 'Verified';
+      doctor.trialEndDate = new Date(Date.now() + customTrialPeriod * 24 * 60 * 60 * 1000);
+      doctor.maxTimeSlots = customMaxTimeSlots;
+      doctor.subscriptionType = 'Standard'; // Update to standard subscription
+      doctor.adminCommissionFee = adminCommissionFee; // Save the commission fee
+    }
+
     await doctor.save();
 
-    const message = `Your profile has been ${verificationStatus.toLowerCase()}.`;
+    let message = `Your profile has been ${verificationStatus.toLowerCase()}.`;
+
+    if (verificationStatus === 'Verified') {
+      const customTrialPeriod = parseInt(trialPeriod) || 60;
+      const customMaxTimeSlots = parseInt(maxTimeSlots) || 3;
+      message = `Your profile has been verified. You have a trial period of ${customTrialPeriod} days and you can add up to ${customMaxTimeSlots} time slots. A commission fee of ${doctor.adminCommissionFee}% has been set.`;
+    }
+
+    if (verificationStatus === 'Not Verified' && reason) {
+      message = `Your profile has been rejected. Reason: ${reason}`;
+    }
+
     const notification = new Notification({
       userId: doctor._id, 
       message,
@@ -121,15 +154,32 @@ router.post('/verify/:id',/* isLoggedIn,*/ async (req, res) => {
     });
     await notification.save();
 
-    req.flash('success_msg', 'Doctor verification status updated.');
-    // res.redirect('/doctor-profile-requests');
+    const mailOptions = {
+      from: process.env.EMAIL_USER,
+      to: doctor.email, 
+      subject: '🎉 Your Profile Status Has Been Updated 🎉',
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 10px; background-color: #F4F7FC;">
+          <h2 style="text-align: center; color: #FF7F50;">Profile Verification Status</h2>
+          <p style="font-size: 16px; color: #272848;">Hi <strong>${doctor.name}</strong>,</p>
+          <p style="font-size: 16px; color: #272848;">${message}</p>
+          <p style="font-size: 16px; color: #272848;">Best regards,</p>
+          <p style="font-size: 16px; color: #272848;"><strong>The MedxBay Team</strong></p>
+          <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
+          <p style="font-size: 14px; color: #777;">P.S. If you have not requested this update, please contact our support team immediately.</p>
+        </div>
+      `
+    };
+
+    await transporter.sendMail(mailOptions);
+
+    req.flash('success_msg', 'Doctor verification status updated, commission fee set, and email sent.');
     res.send('Doctor verification status updated.');
   } catch (err) {
     console.error(err.message);
     res.status(500).send('Server Error');
   }
 });
-
 
 router.get('/view-doctors',/* isLoggedIn*/ async (req, res) => {
   

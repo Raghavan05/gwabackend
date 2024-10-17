@@ -364,6 +364,62 @@ router.get('/bookings', isLoggedIn, checkSubscription, async (req, res) => {
 
 
 
+async function createGoogleCalendarEvent(booking) {
+    const oauth2Client = new google.auth.OAuth2(
+        process.env.GOOGLE_CLIENT_ID,
+        process.env.GOOGLE_CLIENT_SECRET,
+        process.env.GOOGLE_REDIRECT_URI
+    );
+
+    oauth2Client.setCredentials({ refresh_token: process.env.GOOGLE_REFRESH_TOKEN });
+
+    const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
+
+    const event = {
+        summary: `Appointment with Dr. ${booking.doctor.name}`,
+        description: `Appointment with Dr. ${booking.doctor.name} and patient ${booking.patient.name}`,
+        start: {
+            dateTime: booking.date.toISOString(),
+            timeZone: 'America/Los_Angeles',
+        },
+        end: {
+            dateTime: new Date(booking.date.getTime() + 30 * 60000).toISOString(),
+            timeZone: 'America/Los_Angeles',
+        },
+        attendees: [
+            { email: booking.doctor.email },
+            { email: booking.patient.email },
+        ],
+        location: booking.consultationType === 'In-person' ? `${booking.hospital.name}, ${booking.hospital.location.street}, ${booking.hospital.location.city}` : undefined,
+        conferenceData: booking.consultationType === 'Video call' ? {
+            createRequest: {
+                requestId: 'some-random-string',
+                conferenceSolutionKey: {
+                    type: 'hangoutsMeet'
+                }
+            }
+        } : undefined,
+        guestsCanModify: true, 
+        guestsCanInviteOthers: true, 
+        guestsCanSeeOtherGuests: true, 
+    };
+
+    try {
+        const response = await calendar.events.insert({
+            calendarId: 'primary',
+            resource: event,
+            conferenceDataVersion: booking.consultationType === 'Video call' ? 1 : undefined,
+        });
+
+        return booking.consultationType === 'Video call' ? response.data.hangoutLink : response.data.htmlLink;
+    } catch (error) {
+        console.error('Error creating Google Calendar event:', error);
+        throw new Error('Unable to create calendar event');
+    }
+}
+
+
+
 router.post('/bookings/:id', isLoggedIn, async (req, res) => {
     try {
         const { status } = req.body;
@@ -371,13 +427,15 @@ router.post('/bookings/:id', isLoggedIn, async (req, res) => {
 
         const booking = await Booking.findById(bookingId)
             .populate('doctor')
-            .populate('patient');
+            .populate('patient')
+            .populate('hospital');
 
         if (!booking) {
             return res.status(404).send('Booking not found');
         }
 
         const currentStatus = booking.status;
+
         const now = moment();
 
         const bookingDate = moment(booking.date);
@@ -400,8 +458,8 @@ router.post('/bookings/:id', isLoggedIn, async (req, res) => {
             booking.status = status;
         }
 
-        if (status === 'accepted' && !booking.meetingLink && booking.consultationType === 'Video call') {
-            booking.meetingLink = await createGoogleMeetLink(booking);
+        if (status === 'accepted' && !booking.meetingLink) {
+            booking.meetingLink = await createGoogleCalendarEvent(booking);
         }
 
         await booking.save();
@@ -428,7 +486,7 @@ router.post('/bookings/:id', isLoggedIn, async (req, res) => {
 
             await doctor.save();
 
-            let emailSubject, emailContent, chatMessage, notificationMessage;
+            let emailSubject, emailContent, chatMessage;
 
             if (status === 'accepted') {
                 if (booking.consultationType === 'Video call') {
@@ -442,31 +500,16 @@ router.post('/bookings/:id', isLoggedIn, async (req, res) => {
                                         <p style="font-size: 16px;"><strong>Consultation Type:</strong> Video call</p>
                                         <p style="font-size: 16px;"><strong>Meeting Link:</strong></p>
                                         <div style="text-align: center; margin: 20px 0;">
-                                            <a href="${booking.meetingLink}" style="padding: 14px 24px; color: white; background-color: #FF7F50; text-decoration: none; border-radius: 5px; font-size: 16px; display: inline-block;">${booking.meetingLink}</a>
+                                            <a href="${booking.meetingLink}" style="padding: 14px 24px; color: white; background-color: #FF7F50; text-decoration: none; border-radius: 5px; font-size: 16px; display: inline-block;">Join Video Call</a>
                                         </div>
                                         <p style="font-size: 16px;">Best regards,<br><strong>The MedxBay Team</strong></p>
                                         <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
                                     </div>`;
                     await sendAppointmentEmail(booking.patient.email, booking.patient.name, emailSubject, emailContent);
 
-                    emailContent = `<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 10px; background-color: #f9f9f9;">
-                                                        <h2 style="color: #FF7F50; text-align: center;">Appointment Confirmation</h2>
-                                                        <p style="font-size: 16px;">Hi <strong>Dr. ${doctor.name}</strong>,</p>
-                                                        <p style="font-size: 16px;">The appointment with <strong>${booking.patient.name}</strong> has been confirmed. Here are the details:</p>
-                                                        <p style="font-size: 16px;"><strong>Date:</strong> ${booking.date.toDateString()}</p>
-                                                        <p style="font-size: 16px;"><strong>Time:</strong> ${booking.time}</p>
-                                                        <p style="font-size: 16px;"><strong>Consultation Type:</strong> Video call</p>
-                                                        <p style="font-size: 16px;"><strong>Meeting Link:</strong></p>
-                                                        <div style="text-align: center; margin: 20px 0;">
-                                                            <a href="${booking.meetingLink}" style="padding: 14px 24px; color: white; background-color: #FF7F50; text-decoration: none; border-radius: 5px; font-size: 16px; display: inline-block;">${booking.meetingLink}</a>
-                                                        </div>
-                                                        <p style="font-size: 16px;">Best regards,<br><strong>The MedxBay Team</strong></p>
-                                                        <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
-                                                    </div>`;
                     await sendAppointmentEmail(doctor.email, doctor.name, 'Appointment Confirmation Notification', emailContent);
 
                     chatMessage = `Your appointment with Dr. ${doctor.name} on ${booking.date.toDateString()} at ${booking.time} has been confirmed. Join the meeting using the following link: ${booking.meetingLink}`;
-                    notificationMessage = `Your appointment with Dr. ${doctor.name} on ${booking.date.toDateString()} at ${booking.time} has been confirmed. Join the meeting using the following link: ${booking.meetingLink}`;
                 } else if (booking.consultationType === 'In-person') {
                     emailSubject = 'Appointment Confirmation';
                     emailContent = `<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 10px; background-color: #f9f9f9;">
@@ -476,37 +519,36 @@ router.post('/bookings/:id', isLoggedIn, async (req, res) => {
                                         <p style="font-size: 16px;"><strong>Date:</strong> ${booking.date.toDateString()}</p>
                                         <p style="font-size: 16px;"><strong>Time:</strong> ${booking.time}</p>
                                         <p style="font-size: 16px;"><strong>Consultation Type:</strong> In-person</p>
-                                        <p style="font-size: 16px;"><strong>Place:</strong></p>
-                                        <p style="font-size: 16px;">${booking.hospital.name}, ${booking.hospital.location.street}, ${booking.hospital.location.city}, ${booking.hospital.location.state}, ${booking.hospital.location.country}, ${booking.hospital.location.zip}</p>
+                                        <p style="font-size: 16px;"><strong>Location:</strong> ${booking.hospital.name}, ${booking.hospital.location.street}, ${booking.hospital.location.city}</p>
                                         <p style="font-size: 16px;">Best regards,<br><strong>The MedxBay Team</strong></p>
                                         <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
                                     </div>`;
                     await sendAppointmentEmail(booking.patient.email, booking.patient.name, emailSubject, emailContent);
 
-                    chatMessage = `Your appointment with Dr. ${doctor.name} on ${booking.date.toDateString()} at ${booking.time} has been confirmed. Please visit the hospital at ${booking.hospital.name}, ${booking.hospital.location.street}, ${booking.hospital.location.city}, ${booking.hospital.location.state}, ${booking.hospital.location.country}, ${booking.hospital.location.zip}`;
-                    notificationMessage = `Your appointment with Dr. ${doctor.name} on ${booking.date.toDateString()} at ${booking.time} has been confirmed. Please visit the hospital at ${booking.hospital.name}, ${booking.hospital.location.street}, ${booking.hospital.location.city}, ${booking.hospital.location.state}, ${booking.hospital.location.country}, ${booking.hospital.location.zip}`;
+                    await sendAppointmentEmail(doctor.email, doctor.name, 'Appointment Confirmation Notification', emailContent);
+
+                    chatMessage = `Your appointment with Dr. ${doctor.name} on ${booking.date.toDateString()} at ${booking.time} has been confirmed. The appointment will take place at ${booking.hospital.name}, ${booking.hospital.location.street}, ${booking.hospital.location.city}.`;
                 }
+
+                await Notification.create({
+                    userId: booking.patient._id,
+                    message: chatMessage,
+                    type: 'appointment',
+                    chatId: await Chat.findOne({ doctorId: booking.doctor, patientId: booking.patient }).select('_id')
+                });
+
+                await Notification.create({
+                    userId: booking.doctor._id,
+                    message: chatMessage,
+                    type: 'appointment',
+                    chatId: await Chat.findOne({ doctorId: booking.doctor, patientId: booking.patient }).select('_id')
+                });
 
                 await Chat.findOneAndUpdate(
                     { doctorId: booking.doctor, patientId: booking.patient },
                     { $push: { messages: { senderId: booking.doctor, text: chatMessage, timestamp: new Date() } } },
                     { upsert: true, new: true }
                 );
-
-                await Notification.create({
-                    userId: booking.patient._id,
-                    message: notificationMessage,
-                    type: 'appointment',
-                    chatId: booking._id
-                });
-
-                await Notification.create({
-                    userId: booking.doctor._id,
-                    message: notificationMessage,
-                    type: 'appointment',
-                    chatId: booking._id
-                });
-
             } else if (status === 'rejected') {
                 emailSubject = 'Appointment Rejection';
                 emailContent = `<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 10px; background-color: #f9f9f9;">
@@ -519,33 +561,19 @@ router.post('/bookings/:id', isLoggedIn, async (req, res) => {
                 await sendAppointmentEmail(booking.patient.email, booking.patient.name, emailSubject, emailContent);
 
                 chatMessage = `We regret to inform you that your appointment with Dr. ${doctor.name} on ${booking.date.toDateString()} at ${booking.time} has been rejected.`;
-                notificationMessage = `Your appointment with Dr. ${doctor.name} on ${booking.date.toDateString()} at ${booking.time} has been rejected.`;
-
-                await Chat.findOneAndUpdate(
-                    { doctorId: booking.doctor, patientId: booking.patient },
-                    { $push: { messages: { senderId: booking.doctor, text: chatMessage, timestamp: new Date() } } },
-                    { upsert: true, new: true }
-                );
-
+                
                 await Notification.create({
                     userId: booking.patient._id,
-                    message: notificationMessage,
+                    message: chatMessage,
                     type: 'appointment',
-                    chatId: booking._id
-                });
-
-                await Notification.create({
-                    userId: booking.doctor._id,
-                    message: notificationMessage,
-                    type: 'appointment',
-                    chatId: booking._id
+                    chatId: await Chat.findOne({ doctorId: booking.doctor, patientId: booking.patient }).select('_id')
                 });
             }
         }
 
-        res.redirect(`/doctor/bookings`);
+        res.status(200).json({ message: 'Booking status updated successfully' });
     } catch (error) {
-        console.error(error);
+        console.error('Error updating booking:', error);
         res.status(500).send('Server error');
     }
 });
