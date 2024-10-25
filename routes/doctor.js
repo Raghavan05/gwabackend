@@ -810,7 +810,7 @@ router.delete('/manage-time-slots/:id', isLoggedIn, checkSubscription, async (re
 router.post('/add-time-slot', isLoggedIn, checkSubscription, async (req, res) => {
     try {
         const doctorEmail = req.session.user.email;
-        const { date, startTime, endTime, hospital, endDate } = req.body;
+        const { date, startTime, endTime, hospital, consultationType, endDate } = req.body;
 
         const doctor = await Doctor.findOne({ email: doctorEmail });
         if (!doctor) {
@@ -819,11 +819,6 @@ router.post('/add-time-slot', isLoggedIn, checkSubscription, async (req, res) =>
 
         if (doctor.subscriptionType === 'Free' && doctor.maxTimeSlots <= 0) {
             return res.json({ error: 'You have reached the limit of time slots for the free trial. Please subscribe to add more.' });
-        }
-
-        const selectedHospital = doctor.hospitals.find(h => h.name === hospital);
-        if (!selectedHospital) {
-            return res.status(404).send('Hospital not found');
         }
 
         const start = new Date(date);
@@ -846,19 +841,28 @@ router.post('/add-time-slot', isLoggedIn, checkSubscription, async (req, res) =>
                 startTime,
                 endTime,
                 status: 'free',
-                hospital: hospital,
-                hospitalLocation: {
+                consultation: consultationType
+            };
+
+            if (consultationType !== 'Video call') {
+                const selectedHospital = doctor.hospitals.find(h => h.name === hospital);
+                if (!selectedHospital) {
+                    return res.status(404).send('Hospital not found');
+                }
+
+                newTimeSlot.hospital = hospital;
+                newTimeSlot.hospitalLocation = {
                     street: selectedHospital.street,
                     city: selectedHospital.city,
                     state: selectedHospital.state,
                     country: selectedHospital.country,
                     zip: selectedHospital.zip
-                }
-            };
+                };
 
-            if (selectedHospital.lat && selectedHospital.lng) {
-                newTimeSlot.lat = selectedHospital.lat;
-                newTimeSlot.lng = selectedHospital.lng;
+                if (selectedHospital.lat && selectedHospital.lng) {
+                    newTimeSlot.lat = selectedHospital.lat;
+                    newTimeSlot.lng = selectedHospital.lng;
+                }
             }
 
             newTimeSlots.push(newTimeSlot);
@@ -876,13 +880,13 @@ router.post('/add-time-slot', isLoggedIn, checkSubscription, async (req, res) =>
         }
 
         await doctor.save();
-        res.json({ success: 'Time slots added successfully.' });
-        // res.redirect('/doctor/manage-time-slots');
+        res.redirect('/doctor/manage-time-slots');
     } catch (error) {
         console.error(error.message);
         res.status(500).send('Server Error');
     }
 });
+
 
 
 
@@ -1129,45 +1133,55 @@ router.get('/blog', async (req, res) => {
 });
 
 
-router.post('/blog', isLoggedIn, checkSubscription, upload.single('image'), async (req, res) => {
+router.post('/blog', upload.fields([
+    { name: 'image', maxCount: 1 }, 
+    { name: 'images', maxCount: 10 }
+]), async (req, res) => {
     try {
-        const authorEmail = req.session.user.email;  
-        const { title, description, category, hashtags, priority, selectedConditions } = req.body;
+        const authorEmail = req.session.user.email;
 
         const doctor = await Doctor.findOne({ email: authorEmail });
 
-        let authorId = doctor._id;
-        let authorName = doctor.name; 
+        let authorId = doctor ? doctor._id : null;
+        let authorName = doctor ? doctor.name : 'Unknown';
+
+        const { title, description, categories, hashtags, priority, selectedConditions } = req.body;
+
+        const coverImage = req.files['image'] ? req.files['image'][0] : null;
+        const coverImageData = coverImage ? {
+            data: coverImage.buffer,
+            contentType: coverImage.mimetype
+        } : null;
+
+        const images = req.files['images'] ? req.files['images'].map(file => ({
+            data: file.buffer,
+            contentType: file.mimetype
+        })) : [];
 
         const newBlog = new Blog({
             title,
-            author: authorName, 
+            author: authorName,   
             description,
-            authorEmail,  
-            authorId,  
-            categories: category,
-            hashtags: hashtags,
+            authorEmail,
+            authorId,            
+            categories,
+            hashtags,
             priority,
-            conditions: selectedConditions,  
-            image: {
-                data: req.file.buffer,
-                contentType: req.file.mimetype
-            },
+            conditions: selectedConditions,
+            image: coverImageData,
+            images: images,
             verificationStatus: 'Pending'
         });
 
         await newBlog.save();
 
-        res.json({
-            status: 'success',
-            message: 'Blog uploaded successfully'
-        });
-
+        res.render('blog-success', { message: 'Blog uploaded successfully' });
     } catch (err) {
         console.error(err);
         res.status(500).json({ message: 'Server error' });
     }
 });
+
 
 
 router.get('/blogs', isDoctor, isLoggedIn, async (req, res) => {
@@ -1469,21 +1483,63 @@ router.get('/chat/:id', isLoggedIn, checkSubscription, async (req, res) => {
 });
 
 
-router.get('/blogs/view/:id', isLoggedIn, checkSubscription,async (req, res) => {
+router.get('/blogs/view/:id', async (req, res) => {
     try {
         const blogId = req.params.id;
-        const blog = await Blog.findById(blogId).lean();
-  
+
+        let blog = await Blog.findById(blogId).lean();
         if (!blog) {
             return res.status(404).send('Blog not found');
         }
-  
-        res.render('DoctorViewBlog', { blog });
+
+        if (!req.session.viewedBlogs) {
+            req.session.viewedBlogs = [];
+        }
+
+        if (!req.session.viewedBlogs.includes(blogId)) {
+            await Blog.findByIdAndUpdate(blogId, { $inc: { readCount: 1 } });
+            req.session.viewedBlogs.push(blogId);
+        }
+
+        const relatedPosts = await Blog.find({
+            $or: [
+                { categories: { $in: blog.categories } },
+                { hashtags: { $in: blog.hashtags } }
+            ],
+            _id: { $ne: blog._id }, 
+            verificationStatus: "Verified" 
+        }).limit(5).lean();
+
+        const mostReadPosts = await Blog.find({
+            _id: { $ne: blog._id },
+            verificationStatus: "Verified"
+        }).sort({ readCount: -1 }).limit(5).lean();
+
+        let blogImageBase64 = null;
+        if (blog.image && blog.image.data) {
+            blogImageBase64 = Buffer.from(blog.image.data).toString('base64');
+        }
+
+        const blogUrl = `http://medxbay.com/doctor/blogs/view/${blogId}`;
+        const encodedBlogUrl = encodeURIComponent(blogUrl);
+        const encodedTitle = encodeURIComponent(blog.title);
+
+        const facebookShareUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodedBlogUrl}`;
+        const twitterShareUrl = `https://twitter.com/intent/tweet?url=${encodedBlogUrl}&text=${encodedTitle}`;
+
+        res.render('DoctorViewBlog', {
+            blog, 
+            relatedPosts, 
+            mostReadPosts,
+            facebookShareUrl,
+            blogImageBase64,
+            twitterShareUrl
+        });
     } catch (err) {
         console.error(err.message);
         res.status(500).send('Server Error');
     }
-  });
+});
   
   router.post('/blogs/comment/:id', isLoggedIn, async (req, res) => {
     try {

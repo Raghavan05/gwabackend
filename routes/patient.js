@@ -341,12 +341,9 @@ router.get('/doctors', async (req, res) => {
   }
 });
 
-
-
-router.get('/doctors/:id/slots', async (req, res) => {
+router.get('/doctors/:id/slots', isLoggedIn, async (req, res) => {
   try {
       const doctorId = req.params.id;
-      console.log('Fetching doctor with ID:', doctorId); // Log doctor ID
       const doctor = await Doctor.findById(doctorId)
           .populate({
               path: 'reviews.patientId',
@@ -354,17 +351,13 @@ router.get('/doctors/:id/slots', async (req, res) => {
           });
 
       if (!doctor) {
-          console.log('Doctor not found');
           return res.status(404).send('Doctor not found');
       }
-      const insurances = await Insurance.find({ '_id': { $in: doctor.insurances } }).select('name logo');
-      console.log('Insurances:', insurances); // Log insurance data
 
+      const insurances = await Insurance.find({ '_id': { $in: doctor.insurances } }).select('name logo');
       const blogs = await Blog.find({ authorId: doctorId, verificationStatus: 'Verified' });
-      console.log('Blogs:', blogs); // Log blogs data
 
       const conversionRates = await fetchConversionRates();
-      console.log('Conversion rates:', conversionRates); // Log conversion rates
 
       const doctorFeeCurrency = doctor.doctorFeeCurrency || 'usd';
       const selectedCurrency = req.query.currency || 'usd'; 
@@ -390,13 +383,23 @@ router.get('/doctors/:id/slots', async (req, res) => {
       }
 
       const totalFee = feesInAllCurrencies[selectedCurrency.toLowerCase()];
-      console.log('Total fee in selected currency:', totalFee); // Log total fee
 
- 
-      res.json({ doctor, insurances, blogs, feesInAllCurrencies, totalFee, selectedCurrency });
+      if (req.accepts('html')) {
+          res.render('doctorProfileView', { doctor, insurances, blogs, feesInAllCurrencies, totalFee, selectedCurrency });
+      } else if (req.accepts('json')) {
+          res.json({ doctor, insurances, blogs, feesInAllCurrencies, totalFee, selectedCurrency });
+      } else {
+          res.status(406).send('Not Acceptable');
+      }
   } catch (error) {
       console.error('Error occurred:', error.message);
-      res.status(500).json({ error: 'Server Error' });
+      if (req.accepts('html')) {
+          res.status(500).send('Server Error');
+      } else if (req.accepts('json')) {
+          res.status(500).json({ error: 'Server Error' });
+      } else {
+          res.status(406).send('Not Acceptable');
+      }
   }
 });
 
@@ -784,21 +787,51 @@ router.get('/calendar', isLoggedIn, async (req, res) => {
   }
 });
 
+
+
 router.get('/blogs/view/:id', async (req, res) => {
   try {
       const blogId = req.params.id;
-      const blog = await Blog.findById(blogId).lean();
 
+      let blog = await Blog.findById(blogId).lean();
       if (!blog) {
-          return res.status(404).json({ error: 'Blog not found' });
+          return res.status(404).send('Blog not found');
       }
 
-      res.json({ blog });
+      const relatedPosts = await Blog.find({
+          $or: [
+              { categories: { $in: blog.categories } },
+              { hashtags: { $in: blog.hashtags } }
+          ],
+          _id: { $ne: blog._id },
+          verificationStatus: "Verified"
+      }).limit(5).lean();
+
+      const mostReadPosts = await Blog.find({
+          _id: { $ne: blog._id },
+          verificationStatus: "Verified"
+      }).sort({ readCount: -1 }).limit(5).lean();
+
+      const blogUrl = `http://medxbay.com/patient/blogs/view/${blogId}`;
+      const encodedBlogUrl = encodeURIComponent(blogUrl);
+      const encodedTitle = encodeURIComponent(blog.title);
+
+      const facebookShareUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodedBlogUrl}`;
+      const twitterShareUrl = `https://twitter.com/intent/tweet?url=${encodedBlogUrl}&text=${encodedTitle}`;
+
+      res.json({
+          blog,
+          relatedPosts,
+          mostReadPosts,
+          facebookShareUrl,
+          twitterShareUrl
+      });
   } catch (err) {
       console.error(err.message);
-      res.status(500).json({ error: 'Server Error' });
+      res.status(500).send('Server Error');
   }
 });
+
 
 router.get('/blogs/conditions/:condition/all', async (req, res) => {
   try {
@@ -1127,68 +1160,74 @@ router.get('/blogs/conditions', async (req, res) => {
   }
 });
 
+
 router.get('/blogs/conditions/:condition', async (req, res) => {
   try {
       const { condition } = req.params;
 
-      // Fetch top 5 priority blogs for the given condition
-      const topPriorityBlogs = await Blog.find({ conditions: condition })
-          .sort({ priority: -1 })
-          .limit(5);
+      const featuredBlogs = await Blog.find({ 
+          priority: 'high', 
+          verificationStatus: 'Verified' 
+      }).sort({ createdAt: -1 }).limit(5).lean();
 
-      // Fetch first 5 recent blogs
-      const recentBlogs = await Blog.find({ conditions: condition })
-          .sort({ createdAt: -1 })
-          .limit(5);
+      const recentBlogs = await Blog.find({ 
+          conditions: condition,
+          verificationStatus: 'Verified' 
+      }).sort({ createdAt: -1 }).limit(5);
 
-      // Fetch first 5 most-read blogs
-      const mostReadBlogs = await Blog.find({ conditions: condition })
-          .sort({ readCount: -1 })
-          .limit(5);
+      const mostReadBlogs = await Blog.find({ 
+          conditions: condition,
+          verificationStatus: 'Verified' 
+      }).sort({ readCount: -1 }).limit(5);
 
-      // Fetch blogs grouped by categories, showing only 3 categories
       const blogsByCategory = await Blog.aggregate([
-          { $match: { conditions: condition } },
+          { 
+              $match: { 
+                  conditions: condition,
+                  verificationStatus: 'Verified' 
+              } 
+          },
           {
               $group: {
                   _id: "$categories",
-                  blogs: { $push: "$$ROOT" },
-                  totalBlogs: { $sum: 1 } // Count the total blogs in each category
+                  blogs: { $push: "$$ROOT" }
               }
           },
           {
               $project: {
                   _id: 1,
-                  blogs: { $slice: ["$blogs", 6] }, // Limit to 6 blogs per category
-                  totalBlogs: 1,
-                  showAll: { $cond: { if: { $gt: ["$totalBlogs", 3] }, then: true, else: false } }
+                  blogs: { $slice: ["$blogs", 6] }
               }
-          },
-          { $limit: 3 } // Show only 3 categories
+          }
       ]);
 
-      // Aggregate and count hashtags
       const hashtags = await Blog.aggregate([
-          { $match: { conditions: condition } },
+          { 
+              $match: { 
+                  conditions: condition,
+                  verificationStatus: 'Verified' 
+              } 
+          },
           { $unwind: "$hashtags" },
           { $group: { _id: "$hashtags", count: { $sum: 1 } } },
           { $sort: { count: -1 } }
       ]);
+
       const topRatedDoctors = await Doctor.find({ conditions: condition })
           .sort({ rating: -1 }) 
           .limit(3);
 
       res.json({
-          condition,
-          topPriorityBlogs,
-          recentBlogs,
-          mostReadBlogs,
-          blogsByCategory,
-          topRatedDoctors,
-          hashtags,
-          showAllRecent: true, // Flag to display "Show All" link for Recent Blogs
-          showAllMostRead: true // Flag to display "Show All" link for Most Read Blogs
-      });
+        condition,
+        featuredBlogs,
+        recentBlogs,
+        mostReadBlogs,
+        blogsByCategory,
+        topRatedDoctors,
+        hashtags,
+        showAllRecent: true, // Flag to display "Show All" link for Recent Blogs
+        showAllMostRead: true // Flag to display "Show All" link for Most Read Blogs
+    });
   } catch (err) {
       console.error(err);
       res.status(500).send('Server Error');
