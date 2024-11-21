@@ -9,6 +9,8 @@ const Patient = require('../models/Patient');
 const Doctor = require('../models/Doctor');
 const Admin = require('../models/Admin');
 const crypto = require('crypto');
+const Supplier = require('../models/Supplier');
+const Corporate = require('../models/Corporate');
 
 const router = express.Router();
 
@@ -282,6 +284,8 @@ router.post('/login', async (req, res) => {
   try {
     let user = await Patient.findOne({ email }) ||
                await Doctor.findOne({ email }) ||
+               await Supplier.findOne({ contactEmail :email }) ||
+               await Corporate.findOne({ email }) ||
                await Admin.findOne({ email });
 
     if (!user) {

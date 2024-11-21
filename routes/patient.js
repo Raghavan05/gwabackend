@@ -341,7 +341,7 @@ router.get('/doctors', async (req, res) => {
   }
 });
 
-router.get('/doctors/:id/slots', isLoggedIn, async (req, res) => {
+router.get('/doctors/:id/slots', async (req, res) => {
   try {
       const doctorId = req.params.id;
       const doctor = await Doctor.findById(doctorId)
@@ -384,13 +384,9 @@ router.get('/doctors/:id/slots', isLoggedIn, async (req, res) => {
 
       const totalFee = feesInAllCurrencies[selectedCurrency.toLowerCase()];
 
-      if (req.accepts('html')) {
-          res.render('doctorProfileView', { doctor, insurances, blogs, feesInAllCurrencies, totalFee, selectedCurrency });
-      } else if (req.accepts('json')) {
+      
           res.json({ doctor, insurances, blogs, feesInAllCurrencies, totalFee, selectedCurrency });
-      } else {
-          res.status(406).send('Not Acceptable');
-      }
+
   } catch (error) {
       console.error('Error occurred:', error.message);
       if (req.accepts('html')) {

@@ -27,10 +27,9 @@ const patientSchema = new mongoose.Schema({
         default: 'patient',
     },
     phoneNumber: {
-        type:String
+        type: String
     },
     dateOfBirth: Date,
-    age : String,
     verificationToken: String,
     isVerified: { type: Boolean, default: false },
     bloodGroup: String,
@@ -52,7 +51,14 @@ const patientSchema = new mongoose.Schema({
         type: String,
         enum: ['Male', 'Female', 'Other'],
         
-    }
-});
+    },
+    followedCorporates: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Corporate', // Referencing the Corporate model
+      }],
+    }, {
+      timestamps: true, // Adds createdAt and updatedAt fields
+    });
+    
 
 module.exports = mongoose.model('Patient', patientSchema);
