@@ -16,7 +16,7 @@ const corporateSchema = new mongoose.Schema({
   },
   mobileNumber: {
     type: String,
-    // required: true,
+    required: true,
   },
   alternateContactNumber: { type: String },
   businessRegistrationNumber: { type: String },

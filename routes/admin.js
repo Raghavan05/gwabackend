@@ -459,6 +459,7 @@ router.get('/blogs', /*isLoggedIn,*/ async (req, res) => {
   }
 });
 const mongoose = require('mongoose');
+const Supplier = require('../models/Supplier');
 
 router.get('/blogs/view/:id', /*isLoggedIn,*/ async (req, res) => {
   try {
@@ -1161,4 +1162,61 @@ router.post('/commission-fee', async (req, res) => {
     res.status(500).send('Server error');
   }
 });
+
+router.get('/supplier-blog', async (req, res) => {
+  try {
+      const suppliers = await Supplier.find(); 
+      res.json({suppliers});
+  } catch (err) {
+      console.error(err);
+      res.status(500).send('Server Error');
+  }
+});
+
+router.post('/supplier-blog-upload', upload.fields([{ name: 'image', maxCount: 1 }, { name: 'images', maxCount: 5 }]), async (req, res) => {
+  try {
+      const { title, description, categories, hashtags, priority, authorId } = req.body;
+
+      const supplier = await Supplier.findById(authorId);
+      
+      if (!supplier) {
+          return res.status(400).send('Invalid supplier selection');
+      }
+
+      const blogData = {
+          title,
+          author: supplier.name,
+          description,
+          authorEmail: supplier.contactEmail,
+          authorId: supplier._id,
+          categories,
+          hashtags,
+          priority,
+          verificationStatus: 'Pending'
+      };
+
+      if (req.files['image']) {
+          blogData.image = {
+              data: req.files['image'][0].buffer,
+              contentType: req.files['image'][0].mimetype
+          };
+      }
+
+      if (req.files['images']) {
+          blogData.images = req.files['images'].map(file => ({
+              data: file.buffer,
+              contentType: file.mimetype
+          }));
+      }
+
+      const newBlog = new Blog(blogData);
+      await newBlog.save();
+
+      res.json({ message: 'Blog uploaded successfully for supplier' });
+  } catch (err) {
+      console.error(err);
+      res.status(500).json({ message: 'Server Error' });
+  }
+});
+
 module.exports = router;

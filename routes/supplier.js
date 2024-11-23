@@ -10,9 +10,10 @@ const multer = require('multer');
 const storage = multer.memoryStorage();
 const upload = multer({ storage: storage });
 const Order = require('../models/Order');
+const Blog = require('../models/Blog');
 
 function isLoggedIn(req, res, next) {
-    if (req.session && req.session.supplierId) {
+    if (req.session && req.session.user._id) {
         return next(); 
     } else {
         console.warn('Unauthorized access attempt:', {
@@ -222,23 +223,35 @@ router.post('/login', async (req, res) => {
 });
 
 router.get('/dashboard', isLoggedIn, (req, res) => {
-    res.render('supplierIndex'); 
+    res.json('supplierIndex'); 
 });
 
-router.get('/profile', isLoggedIn, async (req, res) => {
+router.get('/profile', async (req, res) => {
     try {
-        const supplier = await Supplier.findById(req.session.supplierId); 
+        const supplier = await Supplier.findById(req.session.user._id); 
         
         const category = req.query.category;
         let products = [];
 
         if (category) {
-            products = await Product.find({ uploadedBy: req.session.supplierId, category: category, countInStock: { $gt: 0 } });
+            products = await Product.find({ uploadedBy: req.session.user._id, category: category, countInStock: { $gt: 0 } });
         } else {
-            products = await Product.find({ uploadedBy: req.session.supplierId, countInStock: { $gt: 0 } });
+            products = await Product.find({ uploadedBy: req.session.user._id, countInStock: { $gt: 0 } });
         }
+        const blogs = await Blog.find({ authorId: req.session.user._id });
 
-        res.render('supplierProfile', { supplier, products });
+        const blogsWithAuthors = await Promise.all(
+            blogs.map(async (blog) => {
+                const author = await Supplier.findById(blog.authorId);
+                return {
+                    ...blog.toObject(),
+                    authorName: author?.name || 'Unknown Author',
+                    authorProfilePicture: author?.profilePicture || null,
+                };
+            })
+        );
+
+        res.json({supplier, products,blogs: blogsWithAuthors });
     } catch (err) {
         console.error('Error fetching supplier data:', err);
         req.flash('error_msg', 'Failed to fetch profile data');
@@ -246,20 +259,13 @@ router.get('/profile', isLoggedIn, async (req, res) => {
     }
 });
 
-
-
-
 router.get('/edit-profile', isLoggedIn, async (req, res) => {
-    const supplier = await Supplier.findById(req.session.supplierId);
-    res.render('editSupplierProfile', { supplier });
+    const supplier = await Supplier.findById(req.session.user._id);
+    res.json({supplier });
 });
 
 router.post('/update-profile', isLoggedIn, upload.fields([{ name: 'profileImage' }, { name: 'coverPhoto' }]), async (req, res) => {
-    const { name, contactEmail, phone, alternateContactNumber, companyName, businessRegistrationNumber, taxIdentificationNumber, businessType, street, city, state, zipCode, country, province, tagline, overview } = req.body;
-    
-    const productCategories = Array.isArray(req.body.productCategories) ? req.body.productCategories : [req.body.productCategories];
-
-    const updateData = {
+    const {
         name,
         contactEmail,
         phone,
@@ -268,34 +274,81 @@ router.post('/update-profile', isLoggedIn, upload.fields([{ name: 'profileImage'
         businessRegistrationNumber,
         taxIdentificationNumber,
         businessType,
+        street,
+        city,
+        state,
+        zipCode,
+        country,
+        province,
         tagline,
+        address,
         overview,
-        productCategories,
-        address: { street, city, state, zipCode, country }
+    } = req.body;
+
+    // Convert productCategories to an array if it exists
+    const productCategories = req.body.productCategories 
+        ? Array.isArray(req.body.productCategories) 
+            ? req.body.productCategories 
+            : [req.body.productCategories]
+        : undefined;
+
+    // Dynamically build updateData object based on provided fields
+    const updateData = {};
+    if (name) updateData.name = name;
+    if (contactEmail) updateData.contactEmail = contactEmail;
+    if (phone) updateData.phone = phone;
+    if (alternateContactNumber) updateData.alternateContactNumber = alternateContactNumber;
+    if (companyName) updateData.companyName = companyName;
+    if (businessRegistrationNumber) updateData.businessRegistrationNumber = businessRegistrationNumber;
+    if (taxIdentificationNumber) updateData.taxIdentificationNumber = taxIdentificationNumber;
+    if (businessType) updateData.businessType = businessType;
+    if (tagline) updateData.tagline = tagline;
+    if (overview) updateData.overview = overview;
+    if (productCategories) updateData.productCategories = productCategories;
+
+ // Handle address if provided
+ if (address) {
+    try {
+        updateData.address = JSON.parse(address);
+    } catch (err) {
+        console.error('Invalid JSON for address:', address);
+        return res.status(400).json({ error: 'Invalid address format' });
+    }
+}
+
+  // Handle file uploads
+  if (req.files && req.files['profileImage']) {
+    updateData.profilePicture = {
+        data: req.files['profileImage'][0].buffer,
+        contentType: req.files['profileImage'][0].mimetype,
     };
+}
 
-    if (req.files['profileImage']) {
-        updateData.profilePicture = {
-            data: req.files['profileImage'][0].buffer,
-            contentType: req.files['profileImage'][0].mimetype
-        };
-    }
+if (req.files && req.files['coverPhoto']) {
+    updateData.coverPhoto = {
+        data: req.files['coverPhoto'][0].buffer,
+        contentType: req.files['coverPhoto'][0].mimetype,
+    };
+}
 
-    if (req.files['coverPhoto']) {
-        updateData.coverPhoto = {
-            data: req.files['coverPhoto'][0].buffer,
-            contentType: req.files['coverPhoto'][0].mimetype
-        };
-    }
 
     try {
-        await Supplier.findByIdAndUpdate(req.session.supplierId, updateData);
-        req.flash('success_msg', 'Profile updated successfully');
-        res.redirect('/supplier/profile');
+        // Update only the provided fields
+        const updatedProfile = await Supplier.findByIdAndUpdate(req.session.user._id, updateData, { new: true });
+
+        // Send JSON response on success
+        return res.status(200).json({
+            message: 'Profile updated successfully',
+            updatedProfile,
+        });
     } catch (err) {
         console.error('Error updating profile:', err);
-        req.flash('error_msg', 'Failed to update profile');
-        res.redirect('/supplier/edit-profile');
+
+        // Send JSON response on error
+        return res.status(500).json({
+            error: 'Failed to update profile',
+            details: err.message,
+        });
     }
 });
 
@@ -407,7 +460,6 @@ router.get('/delete-product/:id', isLoggedIn, async (req, res) => {
     }
 });
 
-
 router.delete('/delete-image/:imageId', isLoggedIn, async (req, res) => {
     const imageId = req.params.imageId; 
     console.log("Received DELETE request for image ID:", req.params.imageId); 
@@ -431,11 +483,9 @@ router.delete('/delete-image/:imageId', isLoggedIn, async (req, res) => {
     }
 });
 
-
 router.get('/manage-orders', isLoggedIn, (req, res) => {
     res.render('manageOrders'); 
 });
-
 
 router.get('/all-suppliers', async (req, res) => {
     try {
@@ -459,8 +509,6 @@ router.get('/supplier/:id', async (req, res) => {
     }
 });
 
-
-
 router.get('/logout', (req, res) => {
     req.session.destroy(err => {
         if (err) {
@@ -470,8 +518,5 @@ router.get('/logout', (req, res) => {
         res.redirect('/supplier/marketplace'); 
     });
 });
-
-
-
 
 module.exports = router;

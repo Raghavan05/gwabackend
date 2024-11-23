@@ -211,7 +211,7 @@ const sendWelcomeEmail = async (name, email, role) => {
         </p>
         <p style="text-align: center; margin: 20px 0;">
           <a href="https://community.medxbay.com/auth/join/bs8YE5y4XWcs6Sq8XLmrE" 
-             style="background-color: #0067FF; color: #ffffff; padding: 10px 20px; text-decoration: none; font-size: 16px; border-radius: 5px; font-weight: bold; display: inline-block;">
+             style="background-color: 067FF; color: #ffffff; padding: 10px 20px; text-decoration: none; font-size: 16px; border-radius: 5px; font-weight: bold; display: inline-block;">
             Join MedxBay Community
           </a>
         </p>
