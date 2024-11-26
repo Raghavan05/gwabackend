@@ -40,7 +40,7 @@ const generateVerificationToken = () => {
       }
     });
   
-    const verificationLink = `http://localhost:3000/corporate/verify-email?token=${token}`;
+    const verificationLink = `${process.env.NODE_URL}/corporate/verify-email?token=${token}`;
   
     const mailOptions = {
       from: process.env.EMAIL_USER,
@@ -122,7 +122,7 @@ router.get('/verify-email', async (req, res) => {
 
         if (!user) {
             req.flash('error_msg', 'Invalid or expired verification link');
-            return res.redirect('/corporate/signup');
+            return res.redirect(`${process.env.REACT_URL}/`);
         }
 
         user.isVerified = true;
@@ -133,7 +133,7 @@ router.get('/verify-email', async (req, res) => {
         await sendWelcomeEmail(user.corporateName, user.email, 'corporate');
 
         req.flash('success_msg', 'Your account has been verified. You can now log in.');
-        res.redirect('/corporate/login');
+        return res.redirect(`${process.env.REACT_URL}/`);
     } catch (err) {
         console.error('Error in corporate email verification:', err);
         req.flash('error_msg', 'Server error');
@@ -518,7 +518,6 @@ router.get('/followers', async (req, res) => {
     res.redirect('/corporate/corporate-home');
   }
 });
-
 
 router.get('/logout', (req, res) => {
   req.session.destroy(err => {
