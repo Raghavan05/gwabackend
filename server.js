@@ -14,8 +14,6 @@ const Subscriptions = require('./models/Subscriptions');
 const ContactUs = require('./models/ContactUs');
 const compression = require('compression');
 const cors = require('cors');
-const oauthModel = require('./models/oauthModel');
-const OAuth2Server = require('oauth2-server');
 
 dotenv.config();
 
@@ -40,12 +38,6 @@ app.use(cors({
 
 }));
 
-app.oauth = new OAuth2Server({
-  model: oauthModel,
-  accessTokenLifetime: 3600,
-  allowBearerTokensInQueryString: true,
-});
-
 
 mongoose.connect(process.env.MONGODB_URI, { 
   useNewUrlParser: true, 
@@ -67,7 +59,6 @@ app.use(session({
   saveUninitialized: false,
   store: sessionStore,
   cookie: { maxAge: 180 * 60 * 1000,
-  
    } 
 }));
 
@@ -116,7 +107,6 @@ app.use('/auth', require('./routes/auth'));
 app.use('/patient', require('./routes/patient'));
 app.use('/doctor', require('./routes/doctor'));
 app.use('/admin', require('./routes/admin'));
-app.use('/oauth', require('./routes/oauth'));
 app.use('/supplier', require('./routes/supplier'));
 app.use('/corporate', require('./routes/corporate'));
 
