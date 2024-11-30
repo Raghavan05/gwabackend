@@ -93,7 +93,7 @@ router.get('/profile', isLoggedIn, async (req, res) => {
       if (!doctor) {
         return res.status(404).send('Doctor not found');
       }
-      res.render('doctorProfile', { doctor });
+      res.json({doctor });
     } catch (err) {
       console.error(err.message);
       res.status(500).send('Server Error');

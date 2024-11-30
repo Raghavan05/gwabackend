@@ -39,7 +39,7 @@ const sendVerificationEmail = async (name, email, token, role) => {
         }
     });
 
-    const verificationLink = `http://localhost:3000/supplier/verify-email?token=${token}`;
+    const verificationLink = `${process.env.NODE_URL}/supplier/verify-email?token=${token}`;
 
     const mailOptions = {
         from: process.env.EMAIL_USER,
@@ -157,7 +157,7 @@ router.get('/verify-email', async (req, res) => {
 
         if (!user) {
             req.flash('error_msg', 'Invalid or expired verification link');
-            return res.redirect('/supplier/register');
+            return res.redirect(`${process.env.REACT_APP_BASE_URL}/supplier/register`);
         }
 
         user.isVerified = true;
@@ -168,11 +168,11 @@ router.get('/verify-email', async (req, res) => {
         req.flash('success_msg', 'Your account has been verified. You can now log in.');
         await sendWelcomeEmail(user.name, user.contactEmail, 'supplier');
 
-        res.redirect('/supplier/login'); 
+        res.redirect(`${process.env.REACT_APP_BASE_URL}/`); 
     } catch (err) {
         console.error('Error in supplier email verification:', err);
         req.flash('error_msg', 'Server error');
-        res.redirect('/supplier/register');
+        res.redirect(`${process.env.REACT_APP_BASE_URL}/supplier/register`);
     }
 });
 

@@ -18,6 +18,7 @@ const storage = multer.memoryStorage();
 const upload = multer({ storage: storage });
 const router = express.Router();
 const Blog = require('../models/Blog');
+const Booking = require('../models/Booking');
 
 function isLoggedIn(req, res, next) {
   if (req.session.user && req.session.user.role === 'corporate') {
@@ -122,7 +123,7 @@ router.get('/verify-email', async (req, res) => {
 
         if (!user) {
             req.flash('error_msg', 'Invalid or expired verification link');
-            return res.redirect(`${process.env.REACT_URL}/`);
+            return res.redirect(`${process.env.REACT_APP_BASE_URL}/`);
         }
 
         user.isVerified = true;
@@ -133,11 +134,11 @@ router.get('/verify-email', async (req, res) => {
         await sendWelcomeEmail(user.corporateName, user.email, 'corporate');
 
         req.flash('success_msg', 'Your account has been verified. You can now log in.');
-        return res.redirect(`${process.env.REACT_URL}/`);
+        return res.redirect(`${process.env.REACT_APP_BASE_URL}/`);
     } catch (err) {
         console.error('Error in corporate email verification:', err);
         req.flash('error_msg', 'Server error');
-        res.redirect('/corporate/signup');
+        res.redirect(`${process.env.REACT_APP_BASE_URL}/corporate/signup`);
     }
 });
 
@@ -516,6 +517,139 @@ router.get('/followers', async (req, res) => {
     console.error('Error fetching followers:', err);
     req.flash('error_msg', 'Error fetching followers');
     res.redirect('/corporate/corporate-home');
+  }
+});
+
+router.get('/insights', async (req, res) => {
+  try {
+    // console.log("before try");
+    const corporateId = req.session?.user._id;
+    // console.log("after try",corporateId);
+
+    if (!corporateId) {
+      return res.status(400).json({ error: 'Corporate ID is required' });
+    }
+
+    const linkedDoctors = await Doctor.find({
+      corporateRequests: {
+        $elemMatch: { 
+          corporateId: corporateId, 
+          requestStatus: 'accepted' 
+        }
+      }
+    });
+
+    const doctorIds = linkedDoctors.map(doctor => doctor._id);
+
+    const totalDoctors = doctorIds.length;
+
+    const totalPremiumDoctors = await Doctor.countDocuments({
+      _id: { $in: doctorIds },
+      subscriptionType: { $ne: 'Free' }
+    });
+
+    const totalPatients = await Booking.aggregate([
+      {
+        $match: {
+          doctor: { $in: doctorIds }
+        }
+      },
+      {
+        $group: {
+          _id: '$patient'
+        }
+      },
+      {
+        $count: 'uniquePatients'
+      }
+    ]).then(result => result[0]?.uniquePatients || 0);
+
+const totalBlogs = await Blog.countDocuments({
+  authorId: { $in: doctorIds }
+});
+
+const blogsVerified = await Blog.countDocuments({
+  authorId: { $in: doctorIds },
+  verificationStatus: 'Verified' 
+});
+
+const blogsPendingRequest = await Blog.countDocuments({
+  authorId: { $in: doctorIds },
+  verificationStatus: 'Pending' 
+});
+
+    const totalConsultations = await Booking.countDocuments({
+      doctor: { $in: doctorIds },
+      status: 'completed'
+    });
+
+    const totalReviews = await Doctor.aggregate([
+      { $match: { _id: { $in: doctorIds } } },
+      { $unwind: '$reviews' },
+      { $count: 'totalReviews' }
+    ]).then(result => result[0]?.totalReviews || 0);
+
+    const bookingFilter = req.query['booking-filter'] || 'all';
+    let startDate, endDate;
+
+    switch (bookingFilter) {
+      case 'today':
+        startDate = new Date();
+        startDate.setHours(0, 0, 0, 0);
+        endDate = new Date();
+        endDate.setHours(23, 59, 59, 999);
+        break;
+      case 'week':
+        startDate = new Date();
+        startDate.setDate(startDate.getDate() - startDate.getDay());
+        startDate.setHours(0, 0, 0, 0);
+        endDate = new Date();
+        endDate.setDate(startDate.getDate() + 6);
+        endDate.setHours(23, 59, 59, 999);
+        break;
+      case 'month':
+        startDate = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+        endDate = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0);
+        endDate.setHours(23, 59, 59, 999);
+        break;
+      default:
+        startDate = new Date('1970-01-01');
+        endDate = new Date();
+    }
+
+    const bookingRates = await Booking.aggregate([
+      {
+        $match: {
+          doctor: { $in: doctorIds },
+          date: { $gte: startDate, $lte: endDate }
+        }
+      },
+      {
+        $group: {
+          _id: { $dayOfWeek: '$date' },
+          count: { $sum: 1 }
+        }
+      },
+      { $sort: { _id: 1 } }
+    ]);
+
+    res.json({
+      totalDoctors,
+      totalPremiumDoctors,
+      totalPatients,
+      totalBlogs,
+      blogsVerified,
+      blogsPendingRequest,
+      totalConsultations,
+      totalReviews,
+      bookingRates,
+      bookingFilter,
+      corporateId,
+      linkedDoctors 
+    });
+  } catch (err) {
+    console.error('Error fetching corporate insights:', err.message);
+    res.status(500).json({ error: 'Internal Server Error', details: err.message });
   }
 });
 
