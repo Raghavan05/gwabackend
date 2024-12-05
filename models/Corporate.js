@@ -12,7 +12,7 @@ const corporateSchema = new mongoose.Schema({
   },
   role: {
     type: String,
-    // required: true,
+    required: true,
   },
   mobileNumber: {
     type: String,
@@ -52,11 +52,11 @@ const corporateSchema = new mongoose.Schema({
       },
       reviewText: {
         type: String,
-        // required: true,
+        required: true,
       },
       rating: {
         type: Number,
-        // required: true,
+        required: true,
         min: 1,
         max: 5,
       },
@@ -75,11 +75,11 @@ const corporateSchema = new mongoose.Schema({
       },
       reviewText: {
         type: String,
-        // required: true,
+        required: true,
       },
       rating: {
         type: Number,
-        // required: true,
+        required: true,
         min: 1,
         max: 5,
       },
@@ -110,6 +110,15 @@ const corporateSchema = new mongoose.Schema({
     ref: 'Supplier',
   }],
   doctors: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Doctor' }],
+  corporateSpecialties: [
+    {
+      image: {
+        data: Buffer,
+        contentType: String,
+      },
+      name: { type: String, required: true }
+    },
+  ],
 });
 
 module.exports = mongoose.model('Corporate', corporateSchema);

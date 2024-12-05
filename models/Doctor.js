@@ -37,12 +37,12 @@ const doctorSchema = new mongoose.Schema({
   doctorFee:{type: Number, default: 85},
   doctorFeeCurrency:{type: String, enum: ['usd', 'inr', 'gbp', 'aed']},
   hospitals: [{
-      name: { type: String, required: true },
-      street: { type: String, required: true },
-      city: { type: String, required: true },
-      state: { type: String, required: true },
-      country: { type: String, required: true },
-      zip: { type: String, required: true },
+      name: { type: String},
+      street: { type: String},
+      city: { type: String },
+      state: { type: String},
+      country: { type: String },
+      zip: { type: String },
     lat: { type: Number }, 
     lng: { type: Number }  
   }],
@@ -132,6 +132,7 @@ const doctorSchema = new mongoose.Schema({
       default: 'pending',
     }
   }],
+  treatmentApproach: { type: [String], enum: ['conventional', 'holistic', 'traditional ', 'speciality'] },
 });
 
 module.exports = mongoose.model('Doctor', doctorSchema);

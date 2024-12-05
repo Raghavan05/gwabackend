@@ -31,6 +31,8 @@ const generateVerificationToken = () => {
 };
 
 const sendVerificationEmail = async (name, email, token, role) => {
+    console.log("sending email");
+
     const transporter = nodemailer.createTransport({
         service: 'gmail',
         auth: {
@@ -67,6 +69,8 @@ const sendVerificationEmail = async (name, email, token, role) => {
     };
 
     await transporter.sendMail(mailOptions);
+    console.log("mail sent");
+    
 };
 
 const sendWelcomeEmail = async (name, email, role) => {
@@ -113,11 +117,6 @@ router.post('/register', async (req, res) => {
             req.flash('error_msg', 'Supplier already exists');
             return res.redirect('/supplier/register');
         }
-        const existingDoctor = await Doctor.findOne({ email });
-        if (existingDoctor) {
-            req.flash('success_msg', 'An account with Medxbay as a doctor already exists. You can sign in using the same credentials.');
-            return res.redirect('/supplier/login'); 
-        }
 
         const token = generateVerificationToken();
         const tokenExpires = Date.now() + 3600000; 
@@ -127,6 +126,7 @@ router.post('/register', async (req, res) => {
             name,
             contactEmail: email,
             phone,
+            role : 'supplier',
             password: await bcrypt.hash(password, 10),
             address: { street, city, state, zipCode, country },
             companyName,
@@ -168,13 +168,14 @@ router.get('/verify-email', async (req, res) => {
         req.flash('success_msg', 'Your account has been verified. You can now log in.');
         await sendWelcomeEmail(user.name, user.contactEmail, 'supplier');
 
-        res.redirect(`${process.env.REACT_APP_BASE_URL}/`); 
+        res.redirect(`${process.env.REACT_APP_BASE_URL}/login`); 
     } catch (err) {
         console.error('Error in supplier email verification:', err);
         req.flash('error_msg', 'Server error');
         res.redirect(`${process.env.REACT_APP_BASE_URL}/supplier/register`);
     }
 });
+
 
 router.get('/login', (req, res) => {
     res.json({ 
@@ -349,6 +350,31 @@ if (req.files && req.files['coverPhoto']) {
             error: 'Failed to update profile',
             details: err.message,
         });
+    }
+});
+
+router.post('/add-category', upload.single('image'), async (req, res) => {
+    try {
+        const { name } = req.body;
+        const image = req.file;
+
+        const category = { name };
+
+        if (image) {
+            category.image = {
+                data: image.buffer,
+                contentType: image.mimetype,
+            };
+        }
+
+        const supplier = await Supplier.findById(req.session.supplierId);
+        supplier.supplierCategories.push(category);
+        await supplier.save();
+
+        res.redirect('/supplier/profile');
+    } catch (err) {
+        console.error('Error adding category:', err);
+        res.status(500).send('Internal Server Error');
     }
 });
 

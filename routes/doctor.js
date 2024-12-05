@@ -240,10 +240,6 @@ router.post('/profile/update', isLoggedIn, async (req, res) => {
             updateData.insurances = Array.from(currentInsurances);
         }
 
-
-  
-
-
         if (req.body.awards) {
             updateData.awards = Array.isArray(req.body.awards) ? req.body.awards : [req.body.awards];
         }
@@ -298,6 +294,9 @@ router.post('/profile/update', isLoggedIn, async (req, res) => {
         if (req.body.doctorFee) {
             updateData.doctorFee = parseFloat(req.body.doctorFee);
         }
+        if (req.body.treatmentApproach) {
+            updateData.treatmentApproach = req.body.treatmentApproach;
+        }
 
 
         doctor = await Doctor.findOneAndUpdate(
@@ -312,10 +311,6 @@ router.post('/profile/update', isLoggedIn, async (req, res) => {
         res.status(500).json({ success: false, message: 'Server Error' });
     }
 });
-
-
-
-
 
 router.post('/profile/verify', isLoggedIn, async (req, res) => {
     try {

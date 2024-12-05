@@ -266,7 +266,7 @@ router.get('/verify-email', async (req, res) => {
 
       await sendWelcomeEmail(user.name, user.email, role);
 
-      return res.redirect(`${process.env.REACT_APP_BASE_URL}/`);
+      return res.redirect(`${process.env.REACT_APP_BASE_URL}/login`);
   } catch (err) {
       console.error('Error in email verification:', err);
       return res.redirect(`${process.env.REACT_APP_BASE_URL/'signup'}`);
@@ -477,7 +477,7 @@ router.post('/forgot-password', async (req, res) => {
     await user.save();
 
 
-    const resetUrl = `${process.env.REACT_URL}/reset-password?token=${resetToken}`;
+    const resetUrl = `${process.env.REACT_APP_BASE_URL}/reset-password?token=${resetToken}`;
 
     // const resetUrl = `http://localhost:8000/reset-password?token=${resetToken}`;
 
@@ -540,36 +540,6 @@ const sendResetPasswordEmail = async (email, name,resetUrl) => {
   await transporter.sendMail(mailOptions);
 };
 
-router.post('/forgot-password', async (req, res) => {
-  const { email } = req.body;
-
-  try {
-    let user = await Patient.findOne({ email }) ||
-               await Doctor.findOne({ email }) ||
-               await Admin.findOne({ email });
-
-    if (!user) {
-      req.flash('error_msg', 'User not found');
-      return res.redirect('/auth/forgot-password');
-    }
-
-    const token = generateResetToken();
-    user.resetPasswordToken = token;
-    user.resetPasswordExpires = Date.now() + 3600000; 
-
-    await user.save();
-
-    await sendResetEmail(email, token);
-
-    req.flash('success_msg', 'Reset link has been sent to your email.');
-    return res.redirect('/auth/forgot-password');
-  } catch (err) {
-    console.error('Error in forgot password:', err);
-    req.flash('error_msg', 'Server error');
-    return res.redirect('/auth/forgot-password');
-  }
-});
-
 router.get('/reset-password', async (req, res) => {
   const { token } = req.query;
 
@@ -586,7 +556,7 @@ router.get('/reset-password', async (req, res) => {
       return res.status(400).json({ success: false, message: 'Invalid or expired password reset token' });
     }
 
-    res.render('reset-password', { token });
+    res.render(`${process.env.REACT_APP_BASE_URL}/reset-password`);
   } catch (err) {
     console.error('Error in reset password:', err);
     return res.status(500).json({ success: false, message: 'Server error' });
@@ -627,6 +597,7 @@ router.post('/reset-password', async (req, res) => {
     return res.status(500).json({ success: false, message: 'Server error' });
   }
 });
+
 
 
 

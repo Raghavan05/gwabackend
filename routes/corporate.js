@@ -134,7 +134,7 @@ router.get('/verify-email', async (req, res) => {
         await sendWelcomeEmail(user.corporateName, user.email, 'corporate');
 
         req.flash('success_msg', 'Your account has been verified. You can now log in.');
-        return res.redirect(`${process.env.REACT_APP_BASE_URL}/`);
+        return res.redirect(`${process.env.REACT_APP_BASE_URL}/login`);
     } catch (err) {
         console.error('Error in corporate email verification:', err);
         req.flash('error_msg', 'Server error');
@@ -376,7 +376,6 @@ if (req.files && req.files['coverPhoto']) {
     };
 }
 
-
   try {
       // Update the user's profile with only the provided fields
       const updatedProfile = await Corporate.findByIdAndUpdate(req.session.user._id, updateData, { new: true });
@@ -386,6 +385,36 @@ if (req.files && req.files['coverPhoto']) {
       console.error('Error updating profile:', err);
       req.flash('error_msg', 'Failed to update profile');
       res.status(500).json({ error: 'Failed to update profile' });
+  }
+});
+
+router.post('/add-specialty', upload.single('image'), async (req, res) => {
+  try {
+    const { name } = req.body;
+    const image = req.file;
+
+    if (!name || !image) {
+      return res.status(400).json({ message: 'Name and image are required.' });
+    }
+
+    const newSpecialty = {
+      image: {
+        data: image.buffer,
+        contentType: image.mimetype,
+      },
+      name,
+    };
+
+    const corporate = await Corporate.findById(req.session?.user._id);
+    console.log(corporate);
+    
+    corporate.corporateSpecialties.push(newSpecialty);
+    await corporate.save();
+
+    res.status(201).json({ message: 'Specialty added successfully.', data: specialtyDocument });
+  } catch (error) {
+    console.error('Error adding specialty:', error);
+    res.status(500).send('Internal Server Error');
   }
 });
 

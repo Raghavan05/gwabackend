@@ -3,8 +3,8 @@ const Schema = mongoose.Schema;
 
 const supplierSchema = new Schema({
     name: { type: String, required: true },
-    contactEmail: { type: String, unique: true },
-    phone: { type: String },
+    contactEmail: { type: String, required: true, unique: true },
+    phone: { type: String, required: true },
     role: {
         type: String,
         // required: true,
@@ -25,13 +25,22 @@ const supplierSchema = new Schema({
         data: Buffer,
         contentType: String
     },
-    coverPhoto: { // new field for cover photo
+    coverPhoto: { 
         data: Buffer,
         contentType: String
     },
-    tagline: { type: String }, // new field
-    overview: { type: String }, // new field
-    productCategories: [{ type: String }], // new field for categories array
+    supplierCategories: [
+        {
+            name: { type: String},
+            image: {
+                data: Buffer,
+                contentType: String,
+            },
+        },
+    ],
+    tagline: { type: String },
+    overview: { type: String }, 
+    productCategories: [{ type: String }],
     password: { type: String, required: true },
     rating: { type: Number, default: 0 },
     totalReviews: { type: Number, default: 0 },
@@ -41,7 +50,6 @@ const supplierSchema = new Schema({
     verificationTokenExpires: { type: Date },
     isVerified: { type: Boolean, default: false },
 
-    // New fields for followers and following
     followers: [{ type: Schema.Types.ObjectId, ref: 'Supplier' }], 
     following: [{ type: Schema.Types.ObjectId, ref: 'Supplier' }] 
 });
