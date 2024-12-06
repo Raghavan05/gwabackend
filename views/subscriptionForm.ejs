@@ -4,55 +4,198 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Subscription Form</title>
-    <script>
-        function updatePaymentDetails() {
-            const tier = document.getElementById('subscriptionType').value;
-            const paymentDetails = document.getElementById('paymentDetails');
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f9;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
 
-            switch (tier) {
-                case 'Free':
-                    paymentDetails.value = '0';
-                    break;
-                case 'Standard':
-                    paymentDetails.value = '1000'; 
-                    break;
-                case 'Premium':
-                    paymentDetails.value = '4900'; 
-                    break;
-                case 'Enterprise':
-                    paymentDetails.value = '9900'; 
-                    break;
-                default:
-                    paymentDetails.value = '';
+        form {
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 500px;
+        }
+
+        label {
+            display: block;
+            margin: 15px 0 5px;
+            font-weight: bold;
+        }
+
+        select, input[type="text"] {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 15px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+
+        input[readonly] {
+            background-color: #e9ecef;
+        }
+
+        button {
+            width: 100%;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px;
+            font-size: 16px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+
+        p {
+            font-size: 16px;
+            margin-top: 0;
+        }
+
+        @media (max-width: 600px) {
+            form {
+                padding: 15px;
+                width: 95%;
+            }
+
+            button {
+                padding: 12px;
+                font-size: 18px;
+            }
+
+            select, input[type="text"] {
+                padding: 12px;
+                font-size: 18px;
+            }
+        }
+    </style>
+
+    <script>
+        const apiKey = '96f2128666msh6c2a99315734957p152189jsn585b9f07df21';
+        const apiHost = 'currency-conversion-and-exchange-rates.p.rapidapi.com';
+
+        async function fetchConversionRates(baseCurrency) {
+            const response = await fetch(`https://${apiHost}/latest?base=${baseCurrency}`, {
+                method: 'GET',
+                headers: {
+                    'X-RapidAPI-Key': apiKey,
+                    'X-RapidAPI-Host': apiHost
+                }
+            });
+            const data = await response.json();
+            return data.rates;
+        }
+
+        async function updatePaymentDetails() {
+            const tier = document.getElementById('subscriptionType').value;
+            const duration = document.getElementById('subscriptionDuration').value;
+            const currency = document.getElementById('currency').value;
+            const paymentDetails = document.getElementById('paymentDetails');
+            const paymentMethodsField = document.getElementById('paymentMethods');
+
+            let baseAmount = 0;
+
+            if (duration === 'monthly') {
+                switch (tier) {
+                    case 'Free':
+                        baseAmount = 0;
+                        break;
+                    case 'Standard':
+                        baseAmount = 10;
+                        break;
+                    case 'Premium':
+                        baseAmount = 49;
+                        break;
+                    case 'Enterprise':
+                        baseAmount = 99;
+                        break;
+                    default:
+                        baseAmount = 0;
+                }
+            } else if (duration === 'annual') {
+                switch (tier) {
+                    case 'Free':
+                        baseAmount = 0;
+                        break;
+                    case 'Standard':
+                        baseAmount = 765;
+                        break;
+                    case 'Premium':
+                        baseAmount = 1020;
+                        break;
+                    case 'Enterprise':
+                        baseAmount = 990;
+                        break;
+                    default:
+                        baseAmount = 0;
+                }
+            }
+
+            try {
+                const conversionRates = await fetchConversionRates('USD');
+                const convertedAmount = baseAmount * conversionRates[currency.toUpperCase()];
+                paymentDetails.value = Math.round(convertedAmount * 100);
+
+                let paymentMethods = '';
+                if (currency === 'inr' || currency === 'aed' || currency === 'gbp') {
+                    paymentMethods = 'Card Payment Only';
+                } else if (currency === 'usd') {
+                    paymentMethods = 'Card or Amazon Pay';
+                }
+
+                paymentMethodsField.textContent = paymentMethods;
+            } catch (error) {
+                console.error('Error fetching conversion rates:', error);
+                paymentDetails.value = 'Error calculating payment amount';
             }
         }
 
         document.addEventListener('DOMContentLoaded', () => {
-            updatePaymentDetails(); 
+            updatePaymentDetails();
         });
     </script>
 </head>
 <body>
-    <form action="/doctor/subscribe" method="post" enctype="multipart/form-data">
+    <form action="/doctor/subscribe" method="post">
         <label for="subscriptionType">Subscription Type:</label>
         <select id="subscriptionType" name="subscriptionType" onchange="updatePaymentDetails()" required>
             <option value="Free">Free</option>
-            <option value="Standard">Standard - $10</option>
-            <option value="Premium">Premium - $49</option>
-            <option value="Enterprise">Enterprise - $99</option>
+            <option value="Standard">Standard - $10 (Monthly) / $765 (Annual)</option>
+            <option value="Premium">Premium - $49 (Monthly) / $1,020 (Annual)</option>
+            <option value="Enterprise">Enterprise - $99 (Monthly)</option>
         </select>
 
-        <label for="paymentDetails">Payment Details (in cents):</label>
+        <label for="subscriptionDuration">Subscription Duration:</label>
+        <select id="subscriptionDuration" name="subscriptionDuration" onchange="updatePaymentDetails()" required>
+            <option value="monthly">Monthly</option>
+            <option value="annual">Annual</option>
+        </select>
+
+        <label for="currency">Select Currency:</label>
+        <select id="currency" name="currency" onchange="updatePaymentDetails()" required>
+            <option value="inr">INR</option>
+            <option value="usd">USD</option>
+            <option value="gbp">GBP</option>
+            <option value="aed">AED</option>
+        </select>
+
+        <label for="paymentDetails">Payment Amount (in smallest unit):</label>
         <input type="text" id="paymentDetails" name="paymentDetails[amount]" readonly>
 
-        <label for="licenseProof">License Proof:</label>
-        <input type="file" id="licenseProof" name="licenseProof" required>
-
-        <label for="certificationProof">Certification Proof:</label>
-        <input type="file" id="certificationProof" name="certificationProof" required>
-
-        <label for="businessProof">Business Proof:</label>
-        <input type="file" id="businessProof" name="businessProof" required>
+        <label for="paymentMethods">Available Payment Methods:</label>
+        <p id="paymentMethods">Card Payment Only</p>
 
         <button type="submit">Submit</button>
     </form>

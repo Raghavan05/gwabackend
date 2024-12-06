@@ -1,52 +1,184 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <script>
+        function timeAgo(date) {
+            const now = new Date();
+            const seconds = Math.floor((now - new Date(date)) / 1000);
+            let interval = Math.floor(seconds / 31536000); 
+            if (interval >= 1) return interval + " year" + (interval === 1 ? "" : "s") + " ago";
+            interval = Math.floor(seconds / 2592000); 
+            if (interval >= 1) return interval + " month" + (interval === 1 ? "" : "s") + " ago";
+            interval = Math.floor(seconds / 86400); 
+            if (interval >= 1) return interval + " day" + (interval === 1 ? "" : "s") + " ago";
+            interval = Math.floor(seconds / 3600); 
+            if (interval >= 1) return interval + " hr" + (interval === 1 ? "" : "s") + " ago";
+            interval = Math.floor(seconds / 60); 
+            if (interval >= 1) return interval + " min" + (interval === 1 ? "" : "s") + " ago";
+            return "just now";
+        }
+    </script>
+
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Blog Details</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+        }
+        .main-content, .sidebar {
+            padding: 20px;
+        }
+        .container {
+            display: flex;
+            flex-wrap: wrap;
+        }
+        .main-content {
+            flex: 3;
+        }
+        .sidebar {
+            flex: 1;
+            padding-left: 20px;
+        }
+        .comments-section {
+            margin-top: 30px;
+        }
+        .sidebar img {
+            max-width: 150px; 
+            max-height: 100px; 
+            object-fit: cover; 
+            margin-bottom: 10px;
+        }
+        .main-content img {
+            max-width: 100%; 
+            height: auto; 
+        }
+    </style>
 </head>
 <body>
-    <h1><%= blog.title %></h1>
-    
-    <% if (blog.image && blog.image.data && blog.image.contentType) { %>
-        <img src="data:<%= blog.image.contentType %>;base64,<%= blog.image.data.toString('base64') %>" alt="<%= blog.title %> Image" width="200">
-    <% } else { %>
-        <p>No image available</p>
-    <% } %>
-    
-    <h2>Author Information</h2>
-    <p><strong>Author:</strong> <%= blog.author %></p>
-    <p><strong>Author Email:</strong> <%= blog.authorEmail %></p>
-    <a href="/doctor/author/<%= blog.authorId %>">View Author Info</a>
-    <h2>Description</h2>
-    <p><%= blog.description %></p>
-    <h2>Summary</h2>
-    <p><%= blog.summary %></p>
+    <div class="container">
+        <div class="main-content">
+            <h1><%= blog.title %></h1>
+            
+            <% if (blog.image && blog.image.data) { %>
+                <img src="data:<%= blog.image.contentType %>;base64,<%= blog.image.data.toString('base64') %>" alt="Blog Image">
+            <% } else { %>
+                <p>No cover image available</p>
+            <% } %>
 
-    <h2>Categories</h2>
-    <ul>
-        <% blog.categories.forEach(category => { %>
-            <li><%= category %></li>
-        <% }); %>
-    </ul>
+            <h2>Author Information</h2>
+            <p><strong>Author:</strong> <%= blog.author %></p>
+            <p><strong>Author Email:</strong> <%= blog.authorEmail %></p>
+            <a href="/doctor/author/<%= blog.authorId %>">View Author Info</a>
 
-    <h2>Hashtags</h2>
-    <ul>
-        <% blog.hashtags.forEach(hashtag => { %>
-            <li><%= hashtag %></li>
-        <% }); %>
-    </ul>
-    
-    <h2>Comments:</h2>
-    <ul>
-        <% blog.comments.forEach(comment => { %>
-            <li><strong><%= comment.username %>:</strong> <%= comment.comment %> (<%= comment.date.toLocaleString() %>)</li>
-        <% }); %>
-    </ul>
-    <form action="/doctor/blogs/comment/<%= blog._id %>" method="POST">
-        <label for="comment">Add Comment:</label>
-        <textarea name="comment" id="comment" cols="30" rows="5" required></textarea>
-        <button type="submit">Submit Comment</button>
-    </form>
+            <h2>Description</h2>
+            <div><%- blog.description %></div>
+
+            <h2>Categories</h2>
+            <ul>
+                <% blog.categories.forEach(category => { %>
+                    <li><%= category %></li>
+                <% }); %>
+            </ul>
+
+            <h2>Conditions</h2>
+            <div><%= blog.conditions %></div>
+
+            <h2>Hashtags</h2>
+            <ul>
+                <% blog.hashtags.forEach(hashtag => { %>
+                    <li><%= hashtag %></li>
+                <% }); %>
+            </ul>
+
+            <section class="comments-section">
+                <h2>Comments</h2>
+                <% if (blog.comments && Array.isArray(blog.comments)) { %>
+                    <% blog.comments.forEach(comment => { %>
+                        <div class="comment">
+                            <div class="comment-header">
+                                <% if (comment.profilePicture) { %>
+                                    <img src="<%= comment.profilePicture %>" alt="Profile Picture" class="comment-profile-picture">
+                                <% } %>
+                                <span class="comment-username"><%= comment.username %></span>
+                                <span class="comment-date">
+                                    <script>document.write(timeAgo("<%= comment.date %>"));</script>
+                                </span>
+                            </div>
+                            <p><%= comment.comment %></p>
+                            <% if (comment.replies && Array.isArray(comment.replies) && comment.replies.length > 0) { %>
+                                <ul>
+                                    <% comment.replies.forEach(reply => { %>
+                                        <li class="reply">
+                                            <div class="reply-header" style="margin-left: 20px;">
+                                                <% if (reply.profilePicture) { %>
+                                                    <img src="<%= reply.profilePicture %>" alt="Reply Profile Picture" class="reply-profile-picture">
+                                                <% } %>
+                                                <span class="reply-username"><%= reply.username %></span>
+                                                <span class="reply-date">
+                                                    <script>document.write(timeAgo("<%= reply.date %>"));</script>
+                                                </span>
+                                            </div>
+                                            <p style="margin-left: 20px;"><%= reply.reply %></p>
+                                        </li>
+                                    <% }); %>
+                                </ul>
+                            <% } %>
+                            <form action="/doctor/blogs/comment/<%= blog._id %>/reply/<%= comment._id %>" method="POST" style="margin-top: 10px;">
+                                <textarea name="reply" placeholder="Write a reply..." rows="2" cols="50"></textarea><br>
+                                <button type="submit">Reply</button>
+                            </form>
+                        </div>
+                    <% }); %>
+                <% } else { %>
+                    <p>No comments available.</p>
+                <% } %>
+
+                <h3>Add a Comment</h3>
+                <form action="/doctor/blogs/comment/<%= blog._id %>" method="POST">
+                    <textarea name="comment" placeholder="Write your comment here..." rows="4" cols="50" required></textarea><br>
+                    <button type="submit">Submit</button>
+                </form>
+            </section>
+        </div>
+
+        <div class="sidebar">
+            <h2>Related Posts</h2>
+            <ul>
+                <% relatedPosts.forEach(post => { %>
+                    <li>
+                        <a href="/doctor/blogs/view/<%= post._id %>">
+                            <img src="data:<%= post.image.contentType %>;base64,<%= post.image.data.toString('base64') %>" alt="<%= post.title %> image">
+                            <strong><%= post.title %></strong>
+                        </a>
+                        <p><%= post.summary %></p>
+                    </li>
+                <% }); %>
+            </ul>
+
+            <h2>Most Reads</h2>
+            <ul>
+                <% mostReadPosts.forEach(post => { %>
+                    <li>
+                        <a href="/doctor/blogs/view/<%= post._id %>">
+                            <img src="data:<%= post.image.contentType %>;base64,<%= post.image.data.toString('base64') %>" alt="<%= post.title %> image">
+                            <strong><%= post.title %></strong>
+                        </a>
+                        <p><%= post.summary %></p>
+                    </li>
+                <% }); %>
+            </ul>
+        </div>
+
+        <div class="social-share">
+            <h3>Share this Blog:</h3>
+            <a href="<%= facebookShareUrl %>" target="_blank">
+                <button>Share on Facebook</button>
+            </a>
+            <a href="<%= twitterShareUrl %>" target="_blank">
+                <button>Share on Twitter</button>
+            </a>
+        </div>
+    </div>
 </body>
 </html>

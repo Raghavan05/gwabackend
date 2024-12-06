@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Corporate Profile</title>
+    <link rel="stylesheet" href="/path/to/your/styles.css">
+    <style>
+      .specialties-list {
+        display: flex;
+        flex-wrap: nowrap; 
+        gap: 10px; 
+        overflow-x: auto; 
+        padding: 10px 0;
+        scrollbar-width: thin; 
+        scrollbar-color: #888 #f5f5f5; 
+    }
+
+    .specialty-item {
+        flex: 0 0 auto; 
+        text-align: center; 
+        max-width: 150px; 
+    }
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Corporate Profile</h1>
+
+        <p><strong>Profile Image:</strong></p>
+        <% if (corporate.profilePicture && corporate.profilePicture.data) { %>
+            <img src="data:<%= corporate.profilePicture.contentType %>;base64,<%= corporate.profilePicture.data.toString('base64') %>" alt="Profile Image" class="img-fluid" style="max-width: 200px;"/>
+        <% } else { %>
+            <p>No profile image uploaded.</p>
+        <% } %>
+
+        <p class="mt-4"><strong>Cover Image:</strong></p>
+        <% if (corporate.coverPhoto && corporate.coverPhoto.data) { %>
+            <img src="data:<%= corporate.coverPhoto.contentType %>;base64,<%= corporate.coverPhoto.data.toString('base64') %>" alt="Cover Image" class="img-fluid" style="max-width: 100%; height: auto; max-height: 300px;"/>
+        <% } else { %>
+            <p>No cover image uploaded.</p>
+        <% } %>
+        <div class="profile-section">
+            <h2>Profile Details</h2>
+            <p><strong>Corporate Name:</strong> <%= corporate.corporateName %></p>
+            <p><strong>Email:</strong> <%= corporate.email %></p>
+            <p><strong>Role:</strong> <%= corporate.role %></p>
+            <p><strong>Mobile Number:</strong> <%= corporate.mobileNumber %></p>
+            <p><strong>Alternate Contact Number:</strong> <%= corporate.alternateContactNumber || 'N/A' %></p>
+            <p><strong>Business Registration Number:</strong> <%= corporate.businessRegistrationNumber %></p>
+            <p><strong>Tax Identification Number:</strong> <%= corporate.taxIdentificationNumber %></p>
+            <p><strong>Business Type:</strong> <%= corporate.businessType %></p>
+            <p><strong>Company Name:</strong> <%= corporate.companyName %></p>
+            <p><strong>Tagline:</strong> <%= corporate.tagline %></p>
+            <p><strong>Overview:</strong> <%= corporate.overview %></p>
+            <h3>Address</h3>
+            <p><strong>Street:</strong> <%= corporate.address.street %></p>
+            <p><strong>City:</strong> <%= corporate.address.city %></p>
+            <p><strong>State:</strong> <%= corporate.address.state %></p>
+            <p><strong>Zip Code:</strong> <%= corporate.address.zipCode %></p>
+            <p><strong>Country:</strong> <%= corporate.address.country %></p>
+        </div>
+        <p><strong>Verification Status:</strong> <%= corporate.verificationStatus %></p>
+
+        <div class="specialties-section">
+          <h2>Corporate Specialties</h2>
+          <% if (corporate.corporateSpecialties && corporate.corporateSpecialties.length > 0) { %>
+            <div class="specialties-list">
+              <% corporate.corporateSpecialties.forEach((specialty, index) => { %>
+                <div class="specialty-item">
+                  <% if (specialty.image && specialty.image.data) { %>
+                    <img src="data:<%= specialty.image.contentType %>;base64,<%= specialty.image.data.toString('base64') %>" alt="<%= specialty.name %>" style="max-width: 100px; height: auto;">
+                  <% } %>
+                  <p><strong><%= specialty.name %></strong></p>
+                  <form action="/corporate/remove-specialty/<%= index %>" method="POST" style="margin-top: 10px;">
+                    <button type="submit" class="btn btn-danger">Remove</button>
+                  </form>
+                </div>
+              <% }); %>
+            </div>
+          <% } else { %>
+            <p>No specialties added yet.</p>
+          <% } %>
+        </div>
+        
+        
+
+        <div class="add-specialty">
+          <button id="add-specialty-btn">Add Specialty</button>
+          <form id="add-specialty-form" action="/corporate/add-specialty" method="POST" enctype="multipart/form-data" style="display: none;">
+            <label for="specialty-name">Name:</label>
+            <input type="text" name="name" id="specialty-name" required>
+            
+            <label for="specialty-image">Image:</label>
+            <input type="file" name="image" id="specialty-image" accept="image/*">
+        
+            <button type="submit">Submit</button>
+          </form>
+        </div>
+        
+        
+
+        <h2>Our Doctors</h2>
+        <h3>Specialties</h3>
+        <% if (corporate.doctors && corporate.doctors.length > 0) { %>
+            <div class="specialities">
+                <% 
+                  // Create a Set to hold unique specialties
+                  let uniqueSpecialties = new Set();
+                  corporate.doctors.forEach(doctor => {
+                    if (doctor.speciality && doctor.speciality.length > 0) {
+                      doctor.speciality.forEach(speciality => {
+                        uniqueSpecialties.add(speciality);
+                      });
+                    }
+                  });
+
+                  // Render each unique specialty as a link
+                  uniqueSpecialties.forEach(speciality => { 
+                %>
+                  <div class="speciality-item">
+                    <a href="#" class="speciality-link" data-speciality="<%= speciality %>"><%= speciality %></a>
+                  </div>
+                <% }) %>
+                <button id="reset-button" style="margin-top: 10px;">Reset</button>
+            </div>
+        <% } else { %>
+            <p>No specialties available.</p>
+        <% } %>
+
+        <ul id="doctor-list">
+          <% corporate.doctors.forEach(doctor => { %>
+            <li class="doctor-item" data-speciality="<%= Array.isArray(doctor.speciality) ? doctor.speciality.join(', ') : '' %>">
+                <div class="doctor-profile">
+                <h3>Doctor Name: <%= doctor.name %></h3>
+
+                <% if (doctor.profilePicture && doctor.profilePicture.data) { %>
+                  <img src="data:<%= doctor.profilePicture.contentType %>;base64,<%= doctor.profilePicture.data.toString('base64') %>" alt="Doctor Profile Picture" width="150" height="180">
+                <% } else { %>
+                  <p>No profile picture available</p>
+                <% } %>
+
+                <p><strong>Specialties:</strong> <%= doctor.speciality.join(', ') %></p>
+              </div>
+              <hr>
+            </li>
+          <% }) %>
+        </ul>
+    </div>
+
+    <div class="blog-section">
+      <% blogs.forEach(blog => { %>
+        <div class="blog-item">
+          <% if (blog.image && blog.image.data) { %>
+            <img src="data:<%= blog.image.contentType %>;base64,<%= blog.image.data.toString('base64') %>" alt="Blog Image" style="max-width: 200px; height: auto;">
+          <% } else { %>
+            <p>No image available</p>
+          <% } %>
+    
+          <h3><%= blog.title %></h3>
+    
+          <div><%- blog.description.slice(0, 150) + '...' %></div>
+    
+          <p><strong>Conditions:</strong> <%= blog.conditions ? blog.conditions.join(', ') : 'N/A' %></p>
+    
+          <div class="author-info">
+            <% if (blog.authorId && blog.authorId.profilePicture && blog.authorId.profilePicture.data) { %>
+              <img src="data:<%= blog.authorId.profilePicture.contentType %>;base64,<%= blog.authorId.profilePicture.data.toString('base64') %>" alt="Author Image" style="width: 50px; height: 50px; border-radius: 50%;">
+            <% } else { %>
+              <p>No author image available</p>
+            <% } %>
+            <p><strong>Author:</strong> <%= blog.authorId ? blog.authorId.name : 'Unknown' %></p>
+          </div>
+    
+          <a href="/patient/blogs/view/<%= blog._id %>" class="read-more">Read More</a>
+        </div>
+      <% }) %>
+    </div>
+
+    <div class="review-section">
+      <h2>Reviews by Doctors</h2>
+      <% if (doctorReviews.length > 0) { %>
+        <div class="reviews">
+          <% doctorReviews.forEach(review => { %>
+            <div class="review-item">
+              <div class="doctor-info">
+                <% if (review.doctorId.profilePicture && review.doctorId.profilePicture.data) { %>
+                  <img src="data:<%= review.doctorId.profilePicture.contentType %>;base64,<%= review.doctorId.profilePicture.data.toString('base64') %>" alt="Doctor Image" style="width: 50px; height: 50px; border-radius: 50%;">
+                <% } else { %>
+                  <img src="/images/placeholder-profile.jpg" alt="Doctor Placeholder" style="width: 50px; height: 50px; border-radius: 50%;">
+                <% } %>
+                <p><strong>Doctor:</strong> <%= review.doctorId.name %></p>
+              </div>
+              <p><strong>Rating:</strong> <%= review.rating %> ★</p>
+              <p><strong>Review:</strong> <%= review.reviewText %></p>
+              <p><strong>Date:</strong> <%= review.createdAt.toLocaleDateString() %> at <%= review.createdAt.toLocaleTimeString() %></p>
+    
+              <form action="/corporate/update-doctor-review-visibility" method="POST">
+                <input type="hidden" name="reviewId" value="<%= review._id %>">
+                <label for="showOnPage">Visiblity</label>
+                <select name="showOnPage">
+                  <option value="true" <%= review.showOnPage ? 'selected' : '' %>>Show</option>
+                  <option value="false" <%= !review.showOnPage ? 'selected' : '' %>>Hide</option>
+                </select>
+                <button type="submit">Update</button>
+              </form>
+            </div>
+          <% }) %>
+        </div>
+      <% } else { %>
+        <p>No reviews from doctors yet.</p>
+      <% } %>
+    
+      <h2>Reviews by Patients</h2>
+      <% if (patientReviews.length > 0) { %>
+        <div class="reviews">
+          <% patientReviews.forEach(review => { %>
+            <div class="review-item">
+              <div class="patient-info">
+                <% if (review.patientId.profilePicture && review.patientId.profilePicture.data) { %>
+                  <img src="data:<%= review.patientId.profilePicture.contentType %>;base64,<%= review.patientId.profilePicture.data.toString('base64') %>" alt="Patient Image" style="width: 50px; height: 50px; border-radius: 50%;">
+                <% } else { %>
+                  <img src="/images/placeholder-profile.jpg" alt="Patient Placeholder" style="width: 50px; height: 50px; border-radius: 50%;">
+                <% } %>
+                <p><strong>Patient:</strong> <%= review.patientId.name %></p>
+              </div>
+              <p><strong>Rating:</strong> <%= review.rating %> ★</p>
+              <p><strong>Review:</strong> <%= review.reviewText %></p>
+              <p><strong>Date:</strong> <%= review.createdAt.toLocaleDateString() %> at <%= review.createdAt.toLocaleTimeString() %></p>
+    
+              <form action="/corporate/update-patient-review-visibility" method="POST">
+                <input type="hidden" name="reviewId" value="<%= review._id %>">
+                <label for="showOnPage">Visiblity</label>
+                <select name="showOnPage">
+                  <option value="true" <%= review.showOnPage ? 'selected' : '' %>>Show</option>
+                  <option value="false" <%= !review.showOnPage ? 'selected' : '' %>>Hide</option>
+                </select>
+                <button type="submit">Update</button>
+              </form>
+            </div>
+          <% }) %>
+        </div>
+      <% } else { %>
+        <p>No reviews from patients yet.</p>
+      <% } %>
+    </div>
+            
+
+    <script>
+      document.addEventListener('DOMContentLoaded', function () {
+        const specialityLinks = document.querySelectorAll('.speciality-link');
+        const doctorItems = document.querySelectorAll('.doctor-item');
+        const resetButton = document.getElementById('reset-button');
+
+        specialityLinks.forEach(function(link) {
+          link.addEventListener('click', function(e) {
+            e.preventDefault();
+            const selectedSpeciality = this.getAttribute('data-speciality');
+
+            doctorItems.forEach(function(item) {
+              item.style.display = 'none';
+            });
+
+            doctorItems.forEach(function(item) {
+              if (item.getAttribute('data-speciality').includes(selectedSpeciality)) {
+                item.style.display = 'block';
+              }
+            });
+          });
+        });
+
+        resetButton.addEventListener('click', function() {
+          doctorItems.forEach(function(item) {
+            item.style.display = 'block';
+          });
+        });
+      });
+
+      document.getElementById('add-specialty-btn').addEventListener('click', function () {
+        const form = document.getElementById('add-specialty-form');
+        form.style.display = form.style.display === 'none' ? 'block' : 'none';
+      });
+    </script>
+
+<a href="/corporate/corporate-home">Back to Home</a>
+
+</body>
+</html>

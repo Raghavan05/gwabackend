@@ -97,11 +97,32 @@
                 <a href="/auth/signup">Signup</a>
             <% } %>
             <a href="/doctor/profile">View Profile</a>
+            <a href="/doctor/corporate-list">View Corporates</a>
+            <a href="/doctor/products">Products</a>
+            <br>
+            <a href="/supplier/all-suppliers">View All Suppliers</a>
+
+            <a href="/doctor/view-corporate-request/<%= doctor._id %>">View Corporate Request</a>
+
         </div>
         <form action="/auth/logout" method="POST" style="display: inline;">
             <button type="submit">Logout</button>
         </form>
         <div class="blogs-container">
+            <h2>Categories</h2>
+            <ul>
+                <% categories.forEach(category => { %>
+                    <li><a href="/doctor/blogs/category/<%= category %>"><%= category %></a></li>
+                <% }) %>
+            </ul>
+
+            <!-- Display Hashtags -->
+            <h2>Hashtags</h2>
+            <ul>
+                <% hashtags.forEach(hashtag => { %>
+                    <li><a href="/doctor/blogs/hashtag/<%= hashtag %>">#<%= hashtag %></a></li>
+                <% }) %>
+            </ul>
             <h2> Blogs</h2>
             <ul>
                 <% blogs.forEach(blog => { %>
@@ -114,6 +135,9 @@
                         <a href="/doctor/blogs/view/<%= blog._id %>">Read More</a>
                     </li>
                 <% }) %>
+            </ul>
+            <ul>
+                <a href="/doctor/blogs/conditions">Conditions</a>
             </ul>
             <button onclick="window.location.href='/doctor/blogs'">View All Blogs</button>
         </div>

@@ -36,29 +36,29 @@ app.use(cors({
 
 }));
 
-app.use(cors({
-  origin: (origin, callback) => {
-    const allowedOrigins = ['http://localhost:3000']; // List of allowed origins
-    if (!origin || allowedOrigins.includes(origin)) {
-      callback(null, origin);
-    } else {
-      callback(new Error('Not allowed by CORS'));
-    }
-  },
-  credentials: true,
-}));
+// app.use(cors({
+//   origin: (origin, callback) => {
+//     const allowedOrigins = ['http://localhost:3000']; // List of allowed origins
+//     if (!origin || allowedOrigins.includes(origin)) {
+//       callback(null, origin);
+//     } else {
+//       callback(new Error('Not allowed by CORS'));
+//     }
+//   },
+//   credentials: true,
+// }));
 
-// Manually set headers for additional flexibility
-app.use((req, res, next) => {
-  const origin = req.headers.origin;
-  if (origin && ['http://localhost:3000'].includes(origin)) {
-    res.header('Access-Control-Allow-Origin', origin);
-    res.header('Access-Control-Allow-Credentials', 'true');
-    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-    res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
-  }
-  next();
-});
+// // Manually set headers for additional flexibility
+// app.use((req, res, next) => {
+//   const origin = req.headers.origin;
+//   if (origin && ['http://localhost:3000'].includes(origin)) {
+//     res.header('Access-Control-Allow-Origin', origin);
+//     res.header('Access-Control-Allow-Credentials', 'true');
+//     res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+//     res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+//   }
+//   next();
+// });
 
 mongoose.connect(process.env.MONGODB_URI, { 
   useNewUrlParser: true, 

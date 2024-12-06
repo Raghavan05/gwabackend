@@ -4,54 +4,59 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin View Blog</title>
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
     <style>
-
+        .select2-container--default .select2-selection--multiple .select2-selection__choice {
+            background-color: #007bff;
+            border: 1px solid #007bff;
+            color: white;
+        }
+        .delete-button {
+            color: red;
+            cursor: pointer;
+        }
     </style>
 </head>
 <body>
+    <div class="dashboard">
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <div class="sidebar-logo">
+                <img src="/logo.png" alt="Admin Logo"> 
+            </div>
+            <h2>Admin Functions</h2>
+            <ul class="sidebar-menu">
+                <li class="sidebar-menu-item"><a href="/admin/blogs" <% if (activePage === 'blogs') { %> class="active" <% } %>>View Admin Blogs</a></li>
+                <li class="sidebar-menu-item"><a href="/admin/blog" <% if (activePage === 'blog-upload') { %> class="active" <% } %>>Upload Admin Blog</a></li>
+                <li class="sidebar-menu-item"><a href="/admin/doctor-profile-requests" <% if (activePage === 'doctor-profile-requests') { %> class="active" <% } %>>Doctor Profile Verification Requests</a></li>
+                <li class="sidebar-menu-item"><a href="/admin/subscriptions" <% if (activePage === 'subscriptions') { %> class="active" <% } %>>Doctor Subscription Verification Requests</a></li>
+                <li class="sidebar-menu-item"><a href="/admin/insurances" <% if (activePage === 'insurances') { %> class="active" <% } %>>Manage Insurance Providers</a></li>
+                <li class="sidebar-menu-item"><a href="/admin/view-appointments" <% if (activePage === 'view-appointments') { %> class="active" <% } %>>View Appointments</a></li>
+                <li class="sidebar-menu-item"><a href="/admin/view-doctors" <% if (activePage === 'view-doctors') { %> class="active" <% } %>>View Doctors</a></li>
+                <li class="sidebar-menu-item"><a href="/admin/view-patients" <% if (activePage === 'view-patients') { %> class="active" <% } %>>View Patients</a></li>
+                <li class="sidebar-menu-item"><a href="/auth/logout" <% if (activePage === 'logout') { %> class="active" <% } %>>Logout</a></li>
+              </ul>
+            <a href="/auth/logout">Logout</a>
+        </div>
 
-<h1>Blog Details</h1>
+        <!-- Main Content -->
+        <div class="main-content">
+            <div class="container">
+                <h1>Blog Details</h1>
+                <h3>Title: <%= blog.title %></h3>
+                <p><strong>Author:</strong> <%= blog.author %></p>
+                <p><strong>Description:</strong> <%= blog.description %></p>
+                <p><strong>Author Email:</strong> <%= blog.authorEmail %></p>
 
-<h3>Title: <%= blog.title %></h3>
-<p><strong>Author:</strong> <%= blog.author %></p>
-<p><strong>Description:</strong> <%= blog.description %></p>
-<p><strong>Summary:</strong> <%= blog.summary %></p>
-<p><strong>Author Email:</strong> <%= blog.authorEmail %></p>
-
-
-
-<h1>Edit Blog</h1>
-
-<form action="/admin/blogs/edit/<%= blog._id %>" method="POST" enctype="multipart/form-data">
-    <label for="title">Title:</label>
-    <input type="text" id="title" name="title" value="<%= blog.title %>"><br>
-
-    <label for="author">Author:</label>
-    <input type="text" id="author" name="author" value="<%= blog.author %>"><br>
-
-    <label for="description">Description:</label>
-    <textarea id="description" name="description"><%= blog.description %></textarea><br>
-
-    <label for="summary">Summary:</label>
-    <textarea id="summary" name="summary"><%= blog.summary %></textarea><br>
-
-    <label for="authorEmail">Author Email:</label>
-    <input type="email" id="authorEmail" name="authorEmail" value="<%= blog.authorEmail %>"><br>
-
-    <select id="priority" name="priority">
-        <option value="High" <%= blog.priority === 'High' ? 'selected' : '' %>>High</option>
-        <option value="Low" <%= blog.priority === 'Low' ? 'selected' : '' %>>Low</option>
-    </select><br>
-
-    <label for="image">Image:</label>
-    <input type="file" id="image" name="image"><br>
-
-    <button type="submit">Save Changes</button>
-</form>
-
-
-<a href="/admin/blogs" class="back-link">Back to Blogs Dashboard</a>
-
-
+                <h1>Edit Blog</h1>
+                <a href="/admin/blogs/edit/<%= blog._id %>">Edit the Blog</a>
+                <form action="/admin/blogs/delete/<%= blog._id %>" method="POST" style="display:inline;">
+                    <button type="submit" class="delete-button">Delete Blog</button>
+                </form>
+                <a href="/admin/blogs" class="back-link">Back to Blogs Dashboard</a>
+            </div>
+        </div>
+    </div>
+    
 </body>
 </html>

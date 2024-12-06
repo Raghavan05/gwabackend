@@ -4,6 +4,57 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Edit Doctor Profile</title>
+  <style>
+    .modal {
+      display: none;
+      position: fixed;
+      z-index: 1;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      overflow: auto;
+      background-color: rgb(0,0,0);
+      background-color: rgba(0,0,0,0.4);
+      padding-top: 60px;
+    }
+    .modal-content {
+      background-color: #fefefe;
+      margin: 5% auto;
+      padding: 20px;
+      border: 1px solid #888;
+      width: 80%;
+    }
+    .close {
+      color: #aaa;
+      float: right;
+      font-size: 28px;
+      font-weight: bold;
+    }
+    .close:hover,
+    .close:focus {
+      color: black;
+      text-decoration: none;
+      cursor: pointer;
+    }
+    #map {
+      height: 400px;
+      width: 100%;
+    }
+    .form-container {
+      margin-top: 20px;
+    }
+
+    #pac-input {
+            margin-top: 10px;
+            margin-left: 10px;
+            padding: 5px;
+            font-size: 14px;
+            width: 400px;
+    }
+
+    
+  </style>
   <script>
     function addInput(fieldName) {
       const container = document.getElementById(fieldName + '-container');
@@ -32,73 +83,288 @@
     }
 
     function addHospital() {
-      const container = document.getElementById('hospitals-container');
-      const newIndex = container.getElementsByClassName('input-group').length;
+  const container = document.getElementById('hospitals-container');
+  const newIndex = container.getElementsByClassName('input-group').length;
 
-      const hospitalWrapper = document.createElement('div');
-      hospitalWrapper.className = 'input-group';
+  const hospitalWrapper = document.createElement('div');
+  hospitalWrapper.className = 'input-group';
 
-      const hospitalNameInput = document.createElement('input');
-      hospitalNameInput.type = 'text';
-      hospitalNameInput.name = `hospitals[${newIndex}][name]`;
-      hospitalNameInput.className = 'form-control';
-      hospitalNameInput.placeholder = 'Hospital Name';
-      hospitalWrapper.appendChild(hospitalNameInput);
+  const hospitalNameInput = document.createElement('input');
+  hospitalNameInput.type = 'text';
+  hospitalNameInput.name = `hospitals[${newIndex}][name]`;
+  hospitalNameInput.className = 'form-control';
+  hospitalNameInput.placeholder = 'Hospital Name';
+  hospitalWrapper.appendChild(hospitalNameInput);
 
-      const hospitalStreetInput = document.createElement('input');
-      hospitalStreetInput.type = 'text';
-      hospitalStreetInput.name = `hospitals[${newIndex}][street]`;
-      hospitalStreetInput.className = 'form-control';
-      hospitalStreetInput.placeholder = 'Hospital Street';
-      hospitalWrapper.appendChild(hospitalStreetInput);
+  const hospitalStreetInput = document.createElement('input');
+  hospitalStreetInput.type = 'text';
+  hospitalStreetInput.name = `hospitals[${newIndex}][street]`;
+  hospitalStreetInput.className = 'form-control';
+  hospitalStreetInput.placeholder = 'Hospital Street';
+  hospitalWrapper.appendChild(hospitalStreetInput);
 
-      const hospitalCityInput = document.createElement('input');
-      hospitalCityInput.type = 'text';
-      hospitalCityInput.name = `hospitals[${newIndex}][city]`;
-      hospitalCityInput.className = 'form-control';
-      hospitalCityInput.placeholder = 'Hospital City';
-      hospitalWrapper.appendChild(hospitalCityInput);
+  const hospitalCityInput = document.createElement('input');
+  hospitalCityInput.type = 'text';
+  hospitalCityInput.name = `hospitals[${newIndex}][city]`;
+  hospitalCityInput.className = 'form-control';
+  hospitalCityInput.placeholder = 'Hospital City';
+  hospitalWrapper.appendChild(hospitalCityInput);
 
-      const hospitalStateInput = document.createElement('input');
-      hospitalStateInput.type = 'text';
-      hospitalStateInput.name = `hospitals[${newIndex}][state]`;
-      hospitalStateInput.className = 'form-control';
-      hospitalStateInput.placeholder = 'Hospital State';
-      hospitalWrapper.appendChild(hospitalStateInput);
+  const hospitalStateInput = document.createElement('input');
+  hospitalStateInput.type = 'text';
+  hospitalStateInput.name = `hospitals[${newIndex}][state]`;
+  hospitalStateInput.className = 'form-control';
+  hospitalStateInput.placeholder = 'Hospital State';
+  hospitalWrapper.appendChild(hospitalStateInput);
 
-      const hospitalCountryInput = document.createElement('input');
-      hospitalCountryInput.type = 'text';
-      hospitalCountryInput.name = `hospitals[${newIndex}][country]`;
-      hospitalCountryInput.className = 'form-control';
-      hospitalCountryInput.placeholder = 'Hospital Country';
-      hospitalWrapper.appendChild(hospitalCountryInput);
+  const hospitalCountryInput = document.createElement('input');
+  hospitalCountryInput.type = 'text';
+  hospitalCountryInput.name = `hospitals[${newIndex}][country]`;
+  hospitalCountryInput.className = 'form-control';
+  hospitalCountryInput.placeholder = 'Hospital Country';
+  hospitalWrapper.appendChild(hospitalCountryInput);
 
-      const hospitalZipInput = document.createElement('input');
-      hospitalZipInput.type = 'text';
-      hospitalZipInput.name = `hospitals[${newIndex}][zip]`;
-      hospitalZipInput.className = 'form-control';
-      hospitalZipInput.placeholder = 'Hospital ZIP';
-      hospitalWrapper.appendChild(hospitalZipInput);
+  const hospitalZipInput = document.createElement('input');
+  hospitalZipInput.type = 'text';
+  hospitalZipInput.name = `hospitals[${newIndex}][zip]`;
+  hospitalZipInput.className = 'form-control';
+  hospitalZipInput.placeholder = 'Hospital ZIP';
+  hospitalWrapper.appendChild(hospitalZipInput);
 
-      const removeButton = document.createElement('button');
-      removeButton.type = 'button';
-      removeButton.className = 'btn btn-danger';
-      removeButton.textContent = 'Remove';
-      removeButton.addEventListener('click', function() {
-        hospitalWrapper.remove();
+  const hospitalLatitudeInput = document.createElement('input');
+  hospitalLatitudeInput.type = 'text';
+  hospitalLatitudeInput.name = `hospitals[${newIndex}][latitude]`;
+  hospitalLatitudeInput.className = 'form-control';
+  hospitalLatitudeInput.placeholder = 'Latitude';
+  hospitalWrapper.appendChild(hospitalLatitudeInput);
+
+  const hospitalLongitudeInput = document.createElement('input');
+  hospitalLongitudeInput.type = 'text';
+  hospitalLongitudeInput.name = `hospitals[${newIndex}][longitude]`;
+  hospitalLongitudeInput.className = 'form-control';
+  hospitalLongitudeInput.placeholder = 'Longitude';
+  hospitalWrapper.appendChild(hospitalLongitudeInput);
+
+  const addGeoButton = document.createElement('button');
+  addGeoButton.type = 'button';
+  addGeoButton.className = 'btn btn-primary';
+  addGeoButton.textContent = 'Add Geolocation';
+  addGeoButton.addEventListener('click', function() {
+    openMapModal(newIndex);
+  });
+  hospitalWrapper.appendChild(addGeoButton);
+
+  const removeButton = document.createElement('button');
+  removeButton.type = 'button';
+  removeButton.className = 'btn btn-danger';
+  removeButton.textContent = 'Remove';
+  removeButton.addEventListener('click', function() {
+    hospitalWrapper.remove();
+  });
+  hospitalWrapper.appendChild(removeButton);
+
+  container.appendChild(hospitalWrapper);
+}
+
+    const allInsurances = <%- JSON.stringify(allInsurances) %>;
+
+    function addInsurance() {
+      const container = document.getElementById('insurances-container');
+      const index = container.children.length;
+
+      const select = document.createElement('select');
+      select.name = `insurances[${index}]`;
+      select.className = 'form-control';
+
+      allInsurances.forEach(ins => {
+        const option = document.createElement('option');
+        option.value = ins._id.toString();
+        option.textContent = ins.name;
+        select.appendChild(option);
       });
-      hospitalWrapper.appendChild(removeButton);
 
-      container.appendChild(hospitalWrapper);
+      const div = document.createElement('div');
+      div.className = 'input-group';
+      div.appendChild(select);
+
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'btn btn-danger';
+      button.textContent = 'Remove';
+      button.onclick = () => div.remove();
+      div.appendChild(button);
+
+      container.appendChild(div);
     }
+
+    let currentHospitalIndex = null; 
+    let map;
+    let marker;
+    let searchBox;
+    let initialized = false;
+
+function initMap() {
+    map = new google.maps.Map(document.getElementById('map'), {
+        zoom: 5,
+        center: { lat: 20.5937, lng: 78.9629 }
+    });
+
+    const input = document.getElementById('pac-input');
+    searchBox = new google.maps.places.SearchBox(input);
+    map.controls[google.maps.ControlPosition.TOP_LEFT].push(input);
+
+    map.addListener('bounds_changed', () => {
+        searchBox.setBounds(map.getBounds());
+    });
+
+    searchBox.addListener('places_changed', () => {
+        const places = searchBox.getPlaces();
+
+        if (places.length === 0) {
+            return;
+        }
+
+        if (marker) {
+            marker.setMap(null);
+        }
+
+        const bounds = new google.maps.LatLngBounds();
+
+        places.forEach((place) => {
+            if (!place.geometry || !place.geometry.location) {
+                console.log('Returned place contains no geometry');
+                return;
+            }
+
+            marker = new google.maps.Marker({
+                map,
+                title: place.name,
+                position: place.geometry.location,
+            });
+
+            document.getElementById('latitude').value = place.geometry.location.lat();
+            document.getElementById('longitude').value = place.geometry.location.lng();
+
+            if (place.geometry.viewport) {
+                bounds.union(place.geometry.viewport);
+            } else {
+                bounds.extend(place.geometry.location);
+            }
+        });
+        map.fitBounds(bounds);
+    });
+
+    map.addListener('click', (event) => {
+        placeMarker(event.latLng);
+    });
+
+    initialized = true;
+}
+
+function placeMarker(location) {
+    if (marker) {
+        marker.setMap(null);
+    }
+    marker = new google.maps.Marker({
+        position: location,
+        map: map
+    });
+    document.getElementById('latitude').value = location.lat();
+    document.getElementById('longitude').value = location.lng();
+}
+
+function openMapModal(index) {
+    currentHospitalIndex = index; 
+
+    document.getElementById('pac-input').value = '';
+
+    if (!initialized) {
+        initMap();
+    }
+
+    document.getElementById('mapModal').style.display = 'block';
+
+    if (marker) {
+        marker.setMap(null);
+    }
+    map.setCenter({ lat: 20.5937, lng: 78.9629 });
+    map.setZoom(5);
+
+    console.log('Opening map modal for hospital index:', currentHospitalIndex);
+}
+
+function saveLocation() {
+  const lat = document.getElementById('latitude').value;
+  const lng = document.getElementById('longitude').value;
+
+  console.log('Saving location. Latitude:', lat, 'Longitude:', lng);
+  
+  if (lat && lng && currentHospitalIndex !== undefined) {
+    const latitudeInput = document.querySelector(`input[name="hospitals[${currentHospitalIndex}][latitude]"]`);
+    const longitudeInput = document.querySelector(`input[name="hospitals[${currentHospitalIndex}][longitude]"]`);
+    
+    if (latitudeInput && longitudeInput) {
+      latitudeInput.value = lat;
+      longitudeInput.value = lng;
+    }
+
+    console.log('Saved location for hospital index:', currentHospitalIndex, 'Latitude:', lat, 'Longitude:', lng);
+  }
+
+  closeMapModal();
+}
+
+
+function closeMapModal() {
+  document.getElementById('mapModal').style.display = 'none';
+}
+
+function addFAQ() {
+    const container = document.getElementById('faq-container');
+    const index = container.children.length;
+
+    const div = document.createElement('div');
+    div.className = 'input-group';
+
+    const questionInput = document.createElement('input');
+    questionInput.type = 'text';
+    questionInput.name = `faqs[${index}][question]`;
+    questionInput.className = 'form-control';
+    questionInput.placeholder = 'FAQ Question';
+    div.appendChild(questionInput);
+
+    const answerInput = document.createElement('input');
+    answerInput.type = 'text';
+    answerInput.name = `faqs[${index}][answer]`;
+    answerInput.className = 'form-control';
+    answerInput.placeholder = 'FAQ Answer';
+    div.appendChild(answerInput);
+
+    const removeButton = document.createElement('button');
+    removeButton.type = 'button';
+    removeButton.className = 'btn btn-danger';
+    removeButton.textContent = 'Remove';
+    removeButton.addEventListener('click', function() {
+      div.remove();
+    });
+    div.appendChild(removeButton);
+
+    container.appendChild(div);
+  }
+
   </script>
-</head>
+  <script src="https://maps.googleapis.com/maps/api/js?key=<%= process.env.GOOGLE_MAPS_API_KEY %>&libraries=places&callback=initMap" async defer></script></head>
+
 <body>
   <h1>Edit Doctor Profile</h1>
   <form action="/doctor/profile/update" method="POST" enctype="multipart/form-data">
     <div>
       <label>Name:</label>
       <input type="text" name="name" value="<%= doctor.name %>" required>
+    </div>
+    <div>
+      <label>About Me:</label>
+      <textarea name="aboutMe" rows="4" cols="50" class="form-control"><%= doctor.aboutMe %></textarea>
     </div>
     <div>
       <label>Email:</label>
@@ -121,6 +387,10 @@
       <input type="text" name="city" value="<%= doctor.city %>" required>
     </div>
     <div>
+      <label>Zipcode:</label>
+      <input type="text" name="zip" value="<%= doctor.zip %>" required>
+    </div>
+    <div>
       <label>Availability:</label>
       <select name="availability">
         <option value="true" <%= doctor.availability === 'true' ? 'selected' : '' %>>Available</option>
@@ -138,6 +408,10 @@
       <input type="date" name="dateOfBirth" value="<%= doctor.dateOfBirth ? doctor.dateOfBirth.toISOString().split('T')[0] : '' %>" required>
     </div>
     <div>
+      <label for="experience">Years of Experience:</label>
+      <input type="number" id="experience" name="experience" min="0" value="<%= doctor.experience %>" required>
+    </div>
+    <div>
       <label>Blood Group:</label>
       <select name="bloodGroup">
         <option value="">Select Blood Group</option>
@@ -152,7 +426,22 @@
         <option value="Unknown" <%= doctor.bloodGroup === 'Unknown' ? 'selected' : '' %>>Unknown</option>
       </select>
     </div>
+    
     <div>
+      <label for="licenseProof">License Proof:</label>
+      <input type="file" name="licenseProof" id="licenseProof" accept="image/*,application/pdf">
+    </div>
+    
+    <div>
+      <label for="certificationProof">Certification Proof:</label>
+      <input type="file" name="certificationProof" id="certificationProof" accept="image/*,application/pdf">
+    </div>
+    
+    <div>
+      <label for="businessProof">Business Proof:</label>
+      <input type="file" name="businessProof" id="businessProof" accept="image/*,application/pdf">
+    </div>
+    
       <label>Website:</label>
       <input type="url" name="website" value="<%= doctor.website %>">
     </div>
@@ -181,7 +470,11 @@
         <option value="Both" <%= doctor.consultation === 'Both' ? 'selected' : '' %>>Both</option>
       </select>
     </div>
-
+    <div class="form-group">
+      <label for="licenseNumber">License Number</label>
+      <input type="text" class="form-control" id="licenseNumber" name="licenseNumber" value="<%= doctor.licenseNumber %>" required>
+  </div>
+  
     <div>
       <label>Specialities:</label>
       <div id="speciality-container">
@@ -221,34 +514,61 @@
       <button type="button" onclick="addInput('languages')">Add Language</button>
     </div>
     
-    <div>
-      <label>Hospitals:</label>
-      <div id="hospitals-container">
-        <% doctor.hospitals.forEach((hospital, index) => { %>
-          <div class="input-group">
-            <input type="text" name="hospitals[<%= index %>][name]" class="form-control" value="<%= hospital.name %>" placeholder="Hospital Name" >
-            <input type="text" name="hospitals[<%= index %>][street]" class="form-control" value="<%= hospital.street %>" placeholder="Hospital Street" >
-            <input type="text" name="hospitals[<%= index %>][city]" class="form-control" value="<%= hospital.city %>" placeholder="Hospital City" >
-            <input type="text" name="hospitals[<%= index %>][state]" class="form-control" value="<%= hospital.state %>" placeholder="Hospital State" >
-            <input type="text" name="hospitals[<%= index %>][country]" class="form-control" value="<%= hospital.country %>" placeholder="Hospital Country" >
-            <input type="text" name="hospitals[<%= index %>][zip]" class="form-control" value="<%= hospital.zip %>" placeholder="Hospital ZIP" >
-            <button type="button" class="btn btn-danger" onclick="this.parentElement.remove()">Remove</button>
-          </div>
-        <% }) %>
-      </div>
-      <button type="button" class="btn btn-primary" onclick="addHospital()">Add Hospital</button>
+    <div id="hospitals-container">
+      <% doctor.hospitals.forEach((hospital, index) => { %>
+        <div class="input-group">
+          <input type="text" name="hospitals[<%= index %>][name]" class="form-control" value="<%= hospital.name %>" placeholder="Hospital Name" required>
+          <input type="text" name="hospitals[<%= index %>][street]" class="form-control" value="<%= hospital.street %>" placeholder="Hospital Street" required>
+          <input type="text" name="hospitals[<%= index %>][city]" class="form-control" value="<%= hospital.city %>" placeholder="Hospital City" required>
+          <input type="text" name="hospitals[<%= index %>][state]" class="form-control" value="<%= hospital.state %>" placeholder="Hospital State" required>
+          <input type="text" name="hospitals[<%= index %>][country]" class="form-control" value="<%= hospital.country %>" placeholder="Hospital Country" required>
+          <input type="text" name="hospitals[<%= index %>][zip]" class="form-control" value="<%= hospital.zip %>" placeholder="Hospital ZIP" required>
+          
+          <input type="text" name="hospitals[<%= index %>][latitude]" class="form-control" value="<%= hospital.lat || '' %>" placeholder="Latitude">
+          <input type="text" name="hospitals[<%= index %>][longitude]" class="form-control" value="<%= hospital.lng || '' %>" placeholder="Longitude">
+
+          
+          <button type="button" class="btn btn-primary" onclick="openMapModal(<%= index %>)">Add Geolocation</button>
+
+          <button type="button" class="btn btn-danger" onclick="this.parentElement.remove()">Remove</button>
+        </div>
+      <% }) %>
     </div>
-      <label>Insurances:</label>
-      <div id="insurances-container">
-        <% doctor.insurances.forEach((insurance, index) => { %>
-          <div class="input-group">
-            <input type="text" name="insurances[<%= index %>]" value="<%= insurance %>" class="form-control">
-            <button type="button" class="btn btn-danger" onclick="this.parentElement.remove()">Remove</button>
-          </div>
-        <% }) %>
+    <button type="button" class="btn btn-primary" onclick="addHospital()">Add Hospital</button>
+    <br>
+
+    <div id="mapModal" class="modal">
+      <div class="modal-content">
+        <span class="close" onclick="closeMapModal()">&times;</span>
+        <input id="pac-input" class="controls" type="text" placeholder="Search for places">
+        <div id="map"></div>
+        <div class="form-container">
+          <label>Latitude:</label>
+          <input type="text" id="latitude" readonly>
+          <label>Longitude:</label>
+          <input type="text" id="longitude" readonly>
+          <button type="button" onclick="saveLocation()">Save Location</button>
+        </div>
       </div>
-      <button type="button" onclick="addInput('insurances')">Add Insurance</button>
     </div>
+
+
+    <label>Insurances:</label>
+    <div id="insurances-container">
+        <% doctor.insurances.forEach((insuranceId, index) => { %>
+            <div class="input-group">
+                <select name="insurances[<%= index %>]" class="form-control">
+                    <% allInsurances.forEach(ins => { %>
+                        <option value="<%= ins._id %>" <%= ins._id.toString() === insuranceId.toString() ? 'selected' : '' %>><%= ins.name %></option>
+                    <% }) %>
+                </select>
+                <button type="button" class="btn btn-danger" onclick="this.parentElement.remove()">Remove</button>
+            </div>
+        <% }) %>
+    </div>
+    <button type="button" class="btn btn-primary" onclick="addInsurance()">Add Insurance</button>
+    </div>
+    
     
     <div>
       <label>Awards:</label>
@@ -265,22 +585,36 @@
     
     <div>
       <label>FAQs:</label>
-      <div id="faqs-container">
+      <div id="faq-container">
         <% doctor.faqs.forEach((faq, index) => { %>
           <div class="input-group">
-            <input type="text" name="faqs[<%= index %>]" value="<%= faq %>" class="form-control">
+            <input type="text" name="faqs[<%= index %>][question]" value="<%= faq.question %>" class="form-control" placeholder="FAQ Question">
+            <input type="text" name="faqs[<%= index %>][answer]" value="<%= faq.answer %>" class="form-control" placeholder="FAQ Answer">
             <button type="button" class="btn btn-danger" onclick="this.parentElement.remove()">Remove</button>
           </div>
         <% }) %>
       </div>
-      <button type="button" onclick="addInput('faqs')">Add FAQ</button>
+      <button type="button" onclick="addFAQ()">Add FAQ</button>
     </div>
 
     <div>
       <label>Profile Picture:</label>
       <input type="file" name="profilePicture">
   </div>
-    
+  <div>
+    <label>Doctor Fee:</label>
+    <input type="number" name="doctorFee" value="<%= doctor.doctorFee %>" required>
+  </div> 
+  <div>
+    <label for="doctorFeeCurrency">Consultation Fee Currency:</label>
+    <select id="doctorFeeCurrency" name="doctorFeeCurrency" required>
+        <option value="usd">USD</option>
+        <option value="inr">INR</option>
+        <option value="gbp">GBP</option>
+        <option value="aed">AED</option>
+    </select>
+  </div>
+
     
     <div>
       <button type="submit">Update Profile</button>

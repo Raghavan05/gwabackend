@@ -1,12 +1,48 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Manage Time Slots</title>
+    <style>
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .calendar {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        .day {
+            border: 1px solid #ccc;
+            padding: 10px;
+            position: relative;
+        }
+        .confirmed {
+            background-color: #90EE90;
+            padding: 5px;
+        }
+        .booked {
+            background-color: #D3D3D3;
+            padding: 5px;
+        }
+        .calendar-header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .navigation {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .navigation a {
+            margin: 0 10px;
+            text-decoration: none;
+        }
+    </style>
 </head>
-
 <body>
     <div class="container">
         <h2>Manage Time Slots</h2>
@@ -21,6 +57,7 @@
                                 <th>Date</th>
                                 <th>Start Time</th>
                                 <th>End Time</th>
+                                <th>Consultation Type</th>
                                 <th>Hospital</th>
                                 <th>Location</th>
                                 <th>Status</th>
@@ -33,11 +70,20 @@
                                     <td><%= slot.date.toDateString() %></td>
                                     <td><%= slot.startTime %></td>
                                     <td><%= slot.endTime %></td>
-                                    <td><%= slot.hospital %></td> 
-                                    <td><%= slot.hospitalLocation ? `${slot.hospitalLocation.street}, ${slot.hospitalLocation.city}, ${slot.hospitalLocation.state}, ${slot.hospitalLocation.country}, ${slot.hospitalLocation.zip}` : 'N/A' %></td> <!-- Display hospital location -->
+                                    <td><%= slot.consultation %></td>
+                                    <td><%= slot.hospital ? slot.hospital : '-' %></td>
+                                    <td>
+                                        <% if (slot.consultation === 'Video call') { %>
+                                            -
+                                        <% } else if (slot.hospitalLocation) { %>
+                                            <%= `${slot.hospitalLocation.street}, ${slot.hospitalLocation.city}, ${slot.hospitalLocation.state}, ${slot.hospitalLocation.country}, ${slot.hospitalLocation.zip}` %>
+                                        <% } else { %>
+                                            N/A
+                                        <% } %>
+                                    </td>
                                     <td><%= slot.status.charAt(0).toUpperCase() + slot.status.slice(1) %></td>
                                     <td>
-                                        <form action="/doctor/manage-time-slots/<%= index %>?_method=DELETE" method="POST">
+                                        <form action="/doctor/manage-time-slots/<%= slot._id %>?_method=DELETE" method="POST">
                                             <button type="submit" class="btn btn-danger">Delete</button>
                                         </form>
                                     </td>
@@ -58,8 +104,24 @@
                 <h5 class="card-title">Add New Time Slot</h5>
                 <form action="/doctor/add-time-slot" method="POST">
                     <div class="form-group">
-                        <label for="date">Date:</label>
+                        <label for="slotType">Time Slot Type:</label><br>
+                        <input type="radio" id="single" name="slotType" value="single" checked> Single
+                        <input type="radio" id="multiple" name="slotType" value="multiple"> Multiple
+                    </div>
+                    <div class="form-group">
+                        <label for="consultationType">Consultation Type:</label>
+                        <select id="consultationType" name="consultationType" class="form-control" required>
+                            <option value="In-person">In-person</option>
+                            <option value="Video call">Video call</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="date">Start Date:</label>
                         <input type="date" id="date" name="date" class="form-control" required>
+                    </div>
+                    <div class="form-group" id="endDateGroup" style="display:none;">
+                        <label for="endDate">End Date:</label>
+                        <input type="date" id="endDate" name="endDate" class="form-control">
                     </div>
                     <div class="form-group">
                         <label for="startTime">Start Time:</label>
@@ -69,7 +131,7 @@
                         <label for="endTime">End Time:</label>
                         <input type="time" id="endTime" name="endTime" class="form-control" required>
                     </div>
-                    <div class="form-group">
+                    <div class="form-group" id="hospitalGroup">
                         <label for="hospital">Select Hospital:</label>
                         <select id="hospital" name="hospital" class="form-control">
                             <% doctor.hospitals.forEach(hospital => { %>
@@ -82,8 +144,61 @@
             </div>
         </div>
 
-        <a href="/doctor/profile" class="btn btn-secondary">Back to Profile</a>
-    </div>
-</body>
+        <div class="container">
+            <div class="navigation">
+                <a href="/doctor/manage-time-slots?month=<%= currentMonth - 1 %>&year=<%= currentYear %>">Previous Month</a>
+                <span><%= months[currentMonth] %> <%= currentYear %></span>
+                <a href="/doctor/manage-time-slots?month=<%= currentMonth + 1 %>&year=<%= currentYear %>">Next Month</a>
+            </div>
 
+            <div class="calendar">
+                <div class="calendar-header"><%= months[currentMonth] %> <%= currentYear %></div>
+                <% for (let i = 1; i <= daysInMonth; i++) { %>
+                    <div class="day">
+                        <strong><%= i %></strong><br>
+                        <% const daySlots = doctor.timeSlots.filter(slot => {
+                            const slotDate = new Date(slot.date);
+                            return slotDate.getDate() === i && slotDate.getMonth() === currentMonth && slotDate.getFullYear() === currentYear;
+                        });
+                        %>
+                        <% daySlots.forEach(slot => { %>
+                            <p class="confirmed"><%= slot.startTime %> - <%= slot.endTime %> - <%= slot.hospital ? slot.hospital : 'Video Call' %></p>
+                        <% }); %>
+                        <% const dayBookings = bookings.filter(booking => {
+                            const bookingDate = new Date(booking.date);
+                            return bookingDate.getDate() === i && bookingDate.getMonth() === currentMonth && bookingDate.getFullYear() === currentYear;
+                        });
+                        %>
+                        <% dayBookings.forEach(booking => { %>
+                            <p class="booked"><%= booking.time %> - <%= booking.consultationType %></p>
+                        <% }); %>
+                    </div>
+                <% } %>
+            </div>
+
+            <a href="/doctor/profile" class="btn btn-secondary">Back to Profile</a>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('multiple').addEventListener('click', function () {
+            document.getElementById('endDateGroup').style.display = 'block';
+            document.getElementById('endDate').required = true;
+        });
+
+        document.getElementById('single').addEventListener('click', function () {
+            document.getElementById('endDateGroup').style.display = 'none';
+            document.getElementById('endDate').required = false;
+        });
+
+        document.getElementById('consultationType').addEventListener('change', function () {
+            const consultationType = document.getElementById('consultationType').value;
+            if (consultationType === 'Video call') {
+                document.getElementById('hospitalGroup').style.display = 'none';
+            } else {
+                document.getElementById('hospitalGroup').style.display = 'block';
+            }
+        });
+    </script>
+</body>
 </html>

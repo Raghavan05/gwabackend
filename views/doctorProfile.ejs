@@ -4,7 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Doctor Profile</title>
-
 </head>
 <body>
 <h1>Doctor Profile</h1>
@@ -34,19 +33,22 @@
     <p><strong>Email:</strong> <%= doctor.email %></p>
     <p><strong>Title:</strong> <%= doctor.title %></p>
     <p><strong>Speciality:</strong> <%= doctor.speciality.join(', ') %></p>
-    <p><strong>Location:</strong> <%= doctor.city %>, <%= doctor.state %>, <%= doctor.country %></p>
+    <p><strong>Location:</strong> <%= doctor.city %>, <%= doctor.state %>, <%= doctor.country %>,  <%= doctor.zip %></p>
     <p><strong>Gender:</strong> <%= doctor.gender %></p>
     <p><strong>Date of Birth:</strong> <%= doctor.dateOfBirth ? new Date(doctor.dateOfBirth).toLocaleDateString() : 'N/A' %></p>
     <p><strong>Age:</strong> <%= doctor.dateOfBirth ? Math.floor((new Date() - new Date(doctor.dateOfBirth)) / (365.25 * 24 * 60 * 60 * 1000)) : 'N/A' %></p>
     <% if (doctor.bloodGroup) { %>
     <p><strong>Blood Group:</strong> <%= doctor.bloodGroup %></p>
     <% } %>
+    <p><strong>Experience:</strong> <%= doctor.experience %></p>
     <p><strong>Website:</strong> <a href="<%= doctor.website %>" target="_blank"><%= doctor.website %></a></p>
     <p><strong>Consultation:</strong> <%= doctor.consultation %></p>
     <p><strong>Rating:</strong> <%= doctor.rating %></p>
     <p><strong>Consultations Completed:</strong> <%= doctor.consultationsCompleted %></p>
-    
+    <p><strong>License Number:</strong> <%= doctor.licenseNumber %></p>
     <h3>Subscription Details</h3>
+    <p><strong>Doctor Fee:</strong> <%= doctor.doctorFee %></p>
+    <p><strong>Doctor Fee Currency:</strong> <%= doctor.doctorFeeCurrency %></p>
     <p><strong>Subscription Type:</strong> <%= doctor.subscriptionType %></p>
     <p><strong>Subscription Verification:</strong> <%= doctor.subscriptionVerification %></p>
 
@@ -81,6 +83,9 @@
     <p>No conditions managed listed.</p>
     <% } %>
 
+    <h3>About Me</h3>
+    <p><%= doctor.aboutMe || 'No information available.' %></p>
+
     <h3>Languages Spoken</h3>
     <% if (doctor.languages && doctor.languages.length > 0) { %>
     <ul>
@@ -91,14 +96,18 @@
     <% } else { %>
     <p>No languages listed.</p>
     <% } %>
+
     <div class="hospitals-section">
-        <h2>Hospitals</h2>
+        <h3>Hospitals</h3>
         <% if (doctor && doctor.hospitals && doctor.hospitals.length > 0) { %>
             <ul>
                 <% doctor.hospitals.forEach(hospital => { %>
                     <li>
                         <p><strong>Name:</strong> <%= hospital.name %></p>
                         <p><strong>Location:</strong> <%= hospital.street %>, <%= hospital.city %>, <%= hospital.state %>, <%= hospital.country %>, <%= hospital.zip %></p>
+                        <% if (hospital.lat && hospital.lng) { %>
+                            <a href="https://www.google.com/maps/dir/?api=1&destination=<%= hospital.lat %>,<%= hospital.lng %>" target="_blank">Get Directions</a>
+                        <% } %>
                     </li>
                 <% }) %>
             </ul>
@@ -106,19 +115,20 @@
             <p>No hospitals available.</p>
         <% } %>
     </div>
-    
-    
 
-    <h3>Insurances Accepted</h3>
-    <% if (doctor.insurances && doctor.insurances.length > 0) { %>
+    <h3>Insurances:</h3>
     <ul>
-        <% doctor.insurances.forEach(insurance => { %>
-        <li><%= insurance %></li>
+        <% insurances.forEach(insurance => { %>
+            <li>
+                <% if (insurance.logo && insurance.logo.data) { %>
+                    <img src="data:<%= insurance.logo.contentType %>;base64,<%= insurance.logo.data.toString('base64') %>" alt="<%= insurance.name %> logo" style="width: 100px; height: auto;">
+                <% } else { %>
+                    <span>No logo available</span>
+                <% } %>
+                <span><%= insurance.name %></span>
+            </li>
         <% }) %>
     </ul>
-    <% } else { %>
-    <p>No insurances listed.</p>
-    <% } %>
 
     <h3>Awards</h3>
     <% if (doctor.awards && doctor.awards.length > 0) { %>
@@ -133,37 +143,55 @@
 
     <h3>FAQs</h3>
     <% if (doctor.faqs && doctor.faqs.length > 0) { %>
-    <ul>
-        <% doctor.faqs.forEach(faq => { %>
-        <li><%= faq %></li>
-        <% }) %>
-    </ul>
+        <ul>
+            <% doctor.faqs.forEach(faq => { %>
+                <li>
+                    <strong>Q: <%= faq.question %></strong><br>
+                    <em>A: <%= faq.answer %></em>
+                </li>
+            <% }) %>
+        </ul>
     <% } else { %>
-    <p>No FAQs listed.</p>
+        <p>No FAQs listed.</p>
     <% } %>
+    
 
     <h3>Time Slots</h3>
-<ul>
-    <% doctor.timeSlots.forEach((timeSlot, index) => { %>
-        <% if (timeSlot) { %>
-            <li>
-                <strong>Date:</strong> <%= timeSlot.date ? new Date(timeSlot.date).toLocaleDateString() : 'N/A' %><br>
-                <strong>Start Time:</strong> <%= timeSlot.startTime %><br>
-                <strong>End Time:</strong> <%= timeSlot.endTime %><br>
-                <strong>Hospital:</strong> <%= timeSlot.hospital %><br> 
-                <strong>Status:</strong> <%= timeSlot.status %><br>
-            </li>
-        <% } %>
-    <% }) %>
-</ul>
+    <ul>
+        <% doctor.timeSlots.forEach((timeSlot, index) => { %>
+            <% if (timeSlot) { %>
+                <li>
+                    <strong>Date:</strong> <%= timeSlot.date ? new Date(timeSlot.date).toLocaleDateString() : 'N/A' %><br>
+                    <strong>Start Time:</strong> <%= timeSlot.startTime %><br>
+                    <strong>End Time:</strong> <%= timeSlot.endTime %><br>
+                    <strong>Hospital:</strong> <%= timeSlot.hospital %><br> 
+                    <strong>Status:</strong> <%= timeSlot.status %><br>
+                </li>
+            <% } %>
+        <% }) %>
+    </ul>
+    <% if (doctor.subscriptionType === 'Standard') { %>
+        <h1>Financial Overview</h1>
+        <div class="financial-section">
+            <p><strong>Total Fees:</strong> $<%= (doctor.totalDoctorFee / 100).toFixed(2) %></p>
+            <p><strong>Total Service Charge:</strong> $<%= (doctor.serviceCharge / 100).toFixed(2) %></p>
+            <p><strong>Temporary Amount:</strong> $<%= (doctor.tempDoctorFee / 100).toFixed(2) %></p>
+            <p><strong>Settlement Status: </strong> <%= (doctor.tempDoctorFeeStatus) %></p>
+        </div>
+    <% } %>
+    
+    <% if (doctor.subscriptionType === 'Premium') { %>
+        <h1>Financial Overview</h1>
+        <div class="financial-section">
+            <p><strong>Total Fees:</strong> $<%= (doctor.totalDoctorFee / 100).toFixed(2) %></p>
+            <p><strong>Temporary Amount:</strong> $<%= (doctor.tempDoctorFee / 100).toFixed(2) %></p>
+        </div>
+    <% } %>
+    
 
     <form action="/doctor/blog" method="GET">
-        <% if (doctor.subscriptionType === 'Standard' || doctor.subscriptionType === 'Premium' || doctor.subscriptionType === 'Enterprise') { %>
-            <% if (doctor.subscriptionVerification === 'Verified') { %>
-                <button type="submit">Upload Blog Post</button>
-            <% } else { %>
-                <button type="button" onclick="handleRestrictedAccess()">Upload Blog Post</button>
-            <% } %>
+        <% if ((doctor.subscriptionType === 'Standard' || doctor.subscriptionType === 'Premium' || doctor.subscriptionType === 'Enterprise') || (doctor.subscriptionVerification === 'Verified' && doctor.trialEndDate && new Date() <= new Date(doctor.trialEndDate))) { %>
+            <button type="submit">Upload Blog Post</button>
         <% } else { %>
             <button type="button" onclick="handleRestrictedAccess()">Upload Blog Post</button>
         <% } %>
@@ -171,28 +199,31 @@
     <a href="/doctor/doctor-index">Home</a>
     
     <a href="/doctor/edit">Edit Profile</a>
-    <% if ((doctor.subscriptionType === 'Standard' || doctor.subscriptionType === 'Premium' || doctor.subscriptionType === 'Enterprise') && doctor.subscriptionVerification === 'Verified') { %>
+    <% if ((doctor.subscriptionType === 'Standard' || doctor.subscriptionType === 'Premium' || doctor.subscriptionType === 'Enterprise') || (doctor.subscriptionVerification === 'Verified' && doctor.trialEndDate && new Date() <= new Date(doctor.trialEndDate))) { %>
         <a href="/doctor/bookings">Manage Bookings</a>
         <a href="/doctor/manage-time-slots">Manage Time Slots</a>
         <a href="/doctor/profile/blogs">View My Blogs</a>
         <a href="/doctor/dashboard">Chat Box</a>
+        <a href="/doctor/order-dashboard">Order Chat</a>
     <% } else { %>
         <button onclick="handleRestrictedAccess()">Manage Bookings</button>
         <button onclick="handleRestrictedAccess()">Manage Time Slots</button>
         <button onclick="handleRestrictedAccess()">Manage Blogs</button>
-        <button onclick="handleRestrictedAccess()">Chat box</button>
+        <button onclick="handleRestrictedAccess()">Chat Box</button>
     <% } %>
 
     <a href="/doctor/calendar" class="btn">View Calendar</a>
     <a href="/doctor/notifications" class="btn">Notifications</a>
+    <a href="/doctor/insights" class="btn">View Insights</a>
+    <a href="/doctor/reviews/<%= doctor._id %>">View Reviews</a>
     <form action="/auth/logout" method="GET">
-    <button type="submit">Logout</button>
+        <button type="submit">Logout</button>
     </form>
 </div>
 
 <script>
     function handleRestrictedAccess() {
-        alert('You need to subscribe to a package to access this feature.');
+        alert('You need to subscribe to a package or be verified on a trial period to access this feature.');
     }
 </script>
 </body>

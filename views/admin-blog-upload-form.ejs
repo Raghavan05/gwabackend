@@ -5,98 +5,282 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Blog Upload</title>
     <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
     <style>
         .select2-container--default .select2-selection--multiple .select2-selection__choice {
             background-color: #007bff;
             border: 1px solid #007bff;
             color: white;
         }
+        #editor {
+            height: 200px;
+            margin-bottom: 20px;
+        }
+        body {
+            font-family: 'Matter-Regular', Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            background-color: #f8f9fa;
+        }
+        .dashboard {
+            display: flex;
+            width: 100%;
+        }
+        .sidebar {
+            width: 250px;
+            background-color: #F7FAFF;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+        }
+        .sidebar-logo {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .sidebar-logo img {
+            width: 170px;
+            height: auto;
+        }
+        .sidebar-menu {
+            list-style: none;
+            padding: 0;
+        }
+        .sidebar-menu-item {
+            margin: 10px 0;
+        }
+        .sidebar-menu-item a {
+            text-decoration: none;
+            color: #A0AAC8;
+            display: block;
+            padding: 13px;
+            transition: color 0.3s ease;
+        }
+        .sidebar-menu-item a.active,
+        .sidebar-menu-item a:hover {
+            color: #42427D;
+            background-color: transparent;
+        }
+        .sidebar h2 {
+            color: #42427D;
+            margin: 0 0 20px 0;
+        }
+        .main-content {
+            flex: 1;
+            padding: 20px;
+            border: 1px solid #e9ecef;
+            border-radius: 5px;
+            background-color: #fff;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            margin: 20px;
+        }
+        label {
+            display: block;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        input[type="text"],
+        input[type="date"],
+        input[type="url"],
+        textarea {
+            width: 100%;
+            padding: 8px;
+            font-size: 14px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        button {
+            background-color: transparent;
+            color: #42427D;
+            border: 1px solid #42427D;
+            padding: 10px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-top: 10px;
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+        button:hover {
+            background-color: #42427D;
+            color: white;
+        }
     </style>
 </head>
 <body>
-    <h1>Admin Blog Upload Form</h1>
-    <form id="blogForm" action="/admin/blog-all" method="POST" enctype="multipart/form-data">
-        <label for="title">Title:</label><br>
-        <input type="text" id="title" name="title" required><br><br>
-        
-        <label for="author">Author Name:</label><br>
-        <input type="text" id="author" name="author" required><br><br>
-        
-        <label for="description">Description:</label><br>
-        <textarea id="description" name="description" rows="4" required></textarea><br><br>
-        
-        <label for="summary">Summary:</label><br>
-        <textarea id="summary" name="summary" rows="4" required></textarea><br><br>
-        
-        <label for="image">Upload Image:</label><br>
-        <input type="file" id="image" name="image" accept="image/*" required><br><br>
-        
-        <label for="categories">Categories:</label><br>
-        <select id="categories" name="categories" multiple="multiple" style="width: 100%;">
-            <option value="General surgery">General Surgery</option>
-            <option value="Oriental medicine">Oriental Medicine</option>
-            <option value="Latest Medical Research">Latest Medical Research</option>
-            <option value="Common Medical Condition">Common Medical Condition</option>
-            <option value="Mental Health">Mental Health</option>
-            <option value="Conventional medicine">Conventional Medicine</option>
-            <option value="Medical education">Medical Education</option>
-            <option value="Psychology">Psychology</option>
-        </select><br><br>
-        
-        <label for="hashtags">Hashtags:</label><br>
-        <select id="hashtags" name="hashtags" multiple="multiple" style="width: 100%;">
-            <option value="#blogger">#blogger</option>
-            <option value="#medfluencer">#medfluencer</option>
-            <option value="#wms">#wms</option>
-            <option value="#mbchb">#mbchb</option>
-            <option value="#mbbs">#mbbs</option>
-            <option value="#neurograd">#neurograd</option>
-            <option value="#usmle">#usmle</option>
-            <option value="#studyinspiration">#studyinspiration</option>
-            <option value="#acceleratedmedicine">#acceleratedmedicine</option>
-            <option value="#exams">#exams</option>
-            <option value="#nursesofinstagram">#nursesofinstagram</option>
-            <option value="#premed">#premed</option>
-            <option value="#neet">#neet</option>
-            <option value="#graduateentrymedicine">#graduateentrymedicine</option>
-            <option value="#hospital">#hospital</option>
-            <option value="#anatomy">#anatomy</option>
-            <option value="#md">#md</option>
-            <option value="#futurevet">#futurevet</option>
-            <option value="#blog">#blog</option>
-            <option value="#surgery">#surgery</option>
-            <option value="#medvet">#medvet</option>
-            <option value="#medicina">#medicina</option>
-            <option value="#vet">#vet</option>
-            <option value="#medico">#medico</option>
-            <option value="#doctorlife">#doctorlife</option>
-            <option value="#nursestyle">#nursestyle</option>
-            <option value="#tiermedizin">#tiermedizin</option>
-            <option value="#medicalscrubs">#medicalscrubs</option>
-            <option value="#cutescrubs">#cutescrubs</option>
-            <option value="#doctorsofinstagram">#doctorsofinstagram</option>
-        </select><br><br>
+    <div class="dashboard">
+        <div class="sidebar">
+            <div class="sidebar-logo">
+                <img src="/logo.png" alt="Admin Logo">
+            </div>
+            <h2>Admin Functions</h2>
+            <ul class="sidebar-menu">
+                <li class="sidebar-menu-item"><a href="/admin/blogs" class="<%= activePage === 'blogs' ? 'active' : '' %>">View and Approve Blogs</a></li>
+                <li class="sidebar-menu-item"><a href="/admin/blog" class="<%= activePage === 'blog' ? 'active' : '' %>">Upload Admin Blog</a></li>
+                <li class="sidebar-menu-item"><a href="/admin/doctor-profile-requests" class="<%= activePage === 'doctor-profile-requests' ? 'active' : '' %>">Doctor Profile Verification Requests</a></li>
+                <li class="sidebar-menu-item"><a href="/admin/subscriptions" class="<%= activePage === 'subscriptions' ? 'active' : '' %>">Doctor Subscription Verification Requests</a></li>
+                <li class="sidebar-menu-item"><a href="/admin/insurances" class="<%= activePage === 'insurances' ? 'active' : '' %>">Manage Insurance Providers</a></li>
+                <li class="sidebar-menu-item"><a href="/admin/view-doctors" class="<%= activePage === 'view-doctors' ? 'active' : '' %>">View Doctors</a></li>
+                <li class="sidebar-menu-item"><a href="/admin/view-patients" class="<%= activePage === 'view-patients' ? 'active' : '' %>">View Patients</a></li>
+                <li class="sidebar-menu-item"><a href="/admin/bookings" class="<%= activePage === 'bookings' ? 'active' : '' %>">View Bookings</a></li>
+                <li class="sidebar-menu-item"><a href="/admin/insights" class="<%= activePage === 'insights' ? 'active' : '' %>">View Insights</a></li>
+                <li class="sidebar-menu-item"><a href="/admin/manage-payments" class="<%= activePage === 'manage-payments' ? 'active' : '' %>">Manage Payments</a></li>
+                <li class="sidebar-menu-item"><a href="/admin/specialty/new" class="<%= activePage === 'specialties' ? 'active' : '' %>">Manage Specialties</a></li>
+                <li class="sidebar-menu-item"><a href="/admin/condition/new" class="<%= activePage === 'conditions' ? 'active' : '' %>">Manage Conditions</a></li>
+                <li class="sidebar-menu-item"><a href="/admin/news-releases" class="<%= activePage === 'news-releases' ? 'active' : '' %>">Manage News Releases</a></li>
+                <li class="sidebar-menu-item"><a href="/admin/news-logos" class="<%= activePage === 'news-logos' ? 'active' : '' %>">Manage News Logos</a></li>
+                <li class="sidebar-menu-item"><a href="/auth/logout" class="<%= activePage === 'logout' ? 'active' : '' %>">Logout</a></li>
+            </ul>
+        </div>
 
-        <label for="priority">Priority:</label><br>
-        <select id="priority" name="priority">
-            <option value="high">High</option>
-            <option value="low">Low</option>
-        </select><br><br>
+        <div class="main-content">
+            <div class="container">
+                <h1>Admin Blog Upload Form</h1>
+                <form id="blogForm" action="/admin/blog-all" method="POST" enctype="multipart/form-data">
+                    <div>
+                        <label for="title">Title:</label>
+                        <input type="text" id="title" name="title" required>
+                    </div>
+
+                    <div>
+                        <label for="author">Select Author (Doctor or Admin):</label>
+                        <select name="authorId" id="author" required>
+                            <option value="<%= admin._id %>"><%= admin.name %> (Admin)</option> 
+                            <% doctors.forEach(doctor => { %>
+                                <option value="<%= doctor._id %>"><%= doctor.name %> (Doctor)</option>
+                            <% }); %>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label for="description">Description:</label>
+                        <div id="editor"></div>
+                        <input type="hidden" name="description" id="description">
+                    </div>
         
-        <button type="submit">Upload Blog</button>
-    </form>
+                    <div>
+                        <label for="image">Upload Cover Image:</label>
+                        <input type="file" id="image" name="image" accept="image/*" required>
+                    </div>
+        
+                    <div>
+                        <label for="images">Additional Images:</label>
+                        <input type="file" id="images" name="images" accept="image/*" multiple>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="conditions">Conditions:</label>
+                        <select id="conditions" name="selectedConditions" class="form-control" required>
+                            <% conditions.forEach(condition => { %>
+                            <option value="<%= condition.name %>"><%= condition.name %></option>
+                            <% }) %>
+                        </select>
+                    </div>
+                    
+                    <div>
+                        <label for="categories">Category:</label>
+                        <select id="categories" name="categories" style="width: 100%;" required>
+                            <option value="Signs & Symptoms">Signs & Symptoms</option>
+                            <option value="Causes & Risks">Causes & Risks</option>
+                            <option value="Testing & Diagnosis">Testing & Diagnosis</option>
+                            <option value="Treatment">Treatment</option>
+                            <option value="Living with [condition]">Living with [condition]</option>
+                        </select>
+                    </div>
+                    
+                    <div>
+                        <label for="hashtags">Hashtags:</label>
+                        <select id="hashtags" name="hashtags" multiple="multiple" style="width: 100%;">
+                            <option value="#diabetes">#diabetes</option>
+                            <option value="#type1diabetes">#type1diabetes</option>
+                            <option value="#type2diabetes">#type2diabetes</option>
+                            <option value="#gestationaldiabetes">#gestationaldiabetes</option>
+                            <option value="#diabetesawareness">#diabetesawareness</option>
+                            <option value="#diabeticlife">#diabeticlife</option>
+                            <option value="#diabetesmanagement">#diabetesmanagement</option>
+                            <option value="#insulin">#insulin</option>
+                            <option value="#bloodsugar">#bloodsugar</option>
+                            <option value="#diabetescommunity">#diabetescommunity</option>
+                            <option value="#diabeteswarrior">#diabeteswarrior</option>
+                            <option value="#diabeteseducation">#diabeteseducation</option>
+                            <option value="#diabetesdiet">#diabetesdiet</option>
+                            <option value="#diabetesresearch">#diabetesresearch</option>
+                            <option value="#diabeteslife">#diabeteslife</option>
+                            <option value="#asthma">#asthma</option>
+                            <option value="#asthmaawareness">#asthmaawareness</option>
+                            <option value="#asthmaattack">#asthmaattack</option>
+                            <option value="#asthmawarrior">#asthmawarrior</option>
+                            <option value="#asthmatreatment">#asthmatreatment</option>
+                            <option value="#asthmaeducation">#asthmaeducation</option>
+                            <option value="#asthmafriendly">#asthmafriendly</option>
+                            <option value="#asthmalife">#asthmalife</option>
+                            <option value="#asthmarelief">#asthmarelief</option>
+                            <option value="#asthmaresearch">#asthmaresearch</option>
+                            <option value="#asthmaawarenessmonth">#asthmaawarenessmonth</option>
+                            <option value="#asthmajourney">#asthmajourney</option>
+                            <option value="#asthmamanagement">#asthmamanagement</option>
+                            <option value="#doctorsofinstagram">#doctorsofinstagram</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label for="priority">Priority:</label>
+                        <select id="priority" name="priority">
+                            <option value="high">High</option>
+                            <option value="low">Low</option>
+                        </select>
+                    </div>
+
+                    <button type="submit">Upload Blog</button>
+                </form>
+            </div>
+        </div>
+    </div>
 
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+    <script src="https://cdn.quilljs.com/1.3.6/quill.js"></script>
     <script>
-        $(document).ready(function() {
-            $('#categories').select2({
-                placeholder: "Select categories",
+        $(document).ready(function () {
+            $('#categories, #hashtags, #conditions').select2({
+                placeholder: "Select",
                 allowClear: true
             });
-            $('#hashtags').select2({
-                placeholder: "Select hashtags",
-                allowClear: true
+    
+            const quill = new Quill('#editor', {
+                theme: 'snow',
+                modules: {
+                    toolbar: [
+                        [{ 'header': [1, 2, false] }],
+                        ['bold', 'italic', 'underline'],
+                        ['image', 'blockquote', 'code-block'],
+                        [{ 'list': 'ordered' }, { 'list': 'bullet' }],
+                        [{ 'align': [] }],
+                        ['clean']
+                    ]
+                }
+            });
+    
+            $('#images').on('change', function () {
+                const files = this.files;
+                for (let i = 0; i < files.length; i++) {
+                    const file = files[i];
+                    const reader = new FileReader();
+    
+                    reader.onload = function (e) {
+                        const imageUrl = e.target.result;
+                        const range = quill.getSelection();
+                        quill.insertEmbed(range.index, 'image', imageUrl);
+                    };
+    
+                    if (file) {
+                        reader.readAsDataURL(file);
+                    }
+                }
+            });
+    
+            $('#blogForm').on('submit', function (e) {
+                var description = document.querySelector('input[name=description]');
+                description.value = quill.root.innerHTML; 
             });
         });
     </script>
