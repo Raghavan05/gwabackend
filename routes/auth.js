@@ -250,12 +250,12 @@ router.get('/verify-email', async (req, res) => {
 
       if (!user) {
           console.log(`User not found with token: ${token} and role: ${role}`);
-          return res.redirect(`${process.env.REACT_APP_BASE_URL}`);
+          return res.redirect(`https://medxbay.com`);
       }
 
       if (user.isVerified) {
           console.log(`User with token: ${token} is already verified.`);
-          return res.redirect(`${process.env.REACT_APP_BASE_URL}`);
+          return res.redirect(`https://medxbay.com`);
       }
 
       user.isVerified = true;
@@ -427,7 +427,7 @@ router.get('/logout', (req, res) => {
     if (err) {
       console.error('Error in session destruction:', err);
       req.flash('error_msg', 'Error logging out');
-      return res.redirect('/');
+      return res.redirect('https://medxbay.com');
     }
 
     res.clearCookie('connect.sid');

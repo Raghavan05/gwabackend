@@ -123,7 +123,7 @@ router.get('/verify-email', async (req, res) => {
 
         if (!user) {
             req.flash('error_msg', 'Invalid or expired verification link');
-            return res.redirect(`${process.env.REACT_APP_BASE_URL}/`);
+            return res.redirect(`https://medxbay.com`);
         }
 
         user.isVerified = true;

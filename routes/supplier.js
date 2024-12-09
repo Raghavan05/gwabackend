@@ -519,7 +519,7 @@ router.get('/all-suppliers', async (req, res) => {
         res.render('allSuppliers', { suppliers });
     } catch (err) {
         console.error('Error fetching suppliers:', err);
-        res.redirect('/');
+        res.redirect('https://medxbay.com');
     }
 });
 
