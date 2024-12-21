@@ -10,7 +10,7 @@ const Doctor = require('../models/Doctor');
 const Admin = require('../models/Admin');
 const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
-const axios = require('axios'); 
+const axios = require('axios');
 const querystring = require('querystring');
 const Corporate = require('../models/Corporate');
 const multer = require('multer');
@@ -29,25 +29,25 @@ function isLoggedIn(req, res, next) {
 }
 
 const generateVerificationToken = () => {
-    return crypto.randomBytes(20).toString('hex');
-  };
-  
-  const sendVerificationEmail = async (name, email, token, role) => {
-    const transporter = nodemailer.createTransport({
-      service: 'gmail',
-      auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASSWORD
-      }
-    });
-  
-    const verificationLink = `${process.env.NODE_URL}/corporate/verify-email?token=${token}`;
-  
-    const mailOptions = {
-      from: process.env.EMAIL_USER,
-      to: email,
-      subject: '🎉 Almost There! Verify Your Email to Complete Your Sign-Up 🎉',
-      html: `
+  return crypto.randomBytes(20).toString('hex');
+};
+
+const sendVerificationEmail = async (name, email, token, role) => {
+  const transporter = nodemailer.createTransport({
+    service: 'gmail',
+    auth: {
+      user: process.env.EMAIL_USER,
+      pass: process.env.EMAIL_PASSWORD
+    }
+  });
+
+  const verificationLink = `${process.env.NODE_URL}/corporate/verify-email?token=${token}`;
+
+  const mailOptions = {
+    from: process.env.EMAIL_USER,
+    to: email,
+    subject: '🎉 Almost There! Verify Your Email to Complete Your Sign-Up 🎉',
+    html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 10px;">
           <h2 style="text-align: center;">
             <span style="color: #FF7F50;">Welcome to MedxBay!</span> 
@@ -82,165 +82,165 @@ const generateVerificationToken = () => {
           <p style="font-size: 14px; color: #777;">P.S. If you didn’t sign up for an account, please disregard this email. No worries—nothing will change if you ignore it.</p>
         </div>
       `
-    };
-    
-  
-  
-    await transporter.sendMail(mailOptions);
   };
 
-  const sendWelcomeEmail = async (name, email, role) => {
-    const transporter = nodemailer.createTransport({
-        service: 'gmail',
-        auth: {
-            user: process.env.EMAIL_USER,
-            pass: process.env.EMAIL_PASSWORD
-        }
-    });
 
-    const mailOptions = {
-        from: process.env.EMAIL_USER,
-        to: email,
-        subject: `Welcome to MedxBay, ${name}!`,
-        html: `
+
+  await transporter.sendMail(mailOptions);
+};
+
+const sendWelcomeEmail = async (name, email, role) => {
+  const transporter = nodemailer.createTransport({
+    service: 'gmail',
+    auth: {
+      user: process.env.EMAIL_USER,
+      pass: process.env.EMAIL_PASSWORD
+    }
+  });
+
+  const mailOptions = {
+    from: process.env.EMAIL_USER,
+    to: email,
+    subject: `Welcome to MedxBay, ${name}!`,
+    html: `
             <h2>Welcome, ${name}!</h2>
             <p>Thank you for verifying your account. You can now start using our platform.</p>
         `
-    };
+  };
 
-    await transporter.sendMail(mailOptions);
+  await transporter.sendMail(mailOptions);
 };
 
 router.get('/verify-email', async (req, res) => {
-    const { token } = req.query;
+  const { token } = req.query;
 
-    try {
-        const user = await Corporate.findOne({
-            verificationToken: token,
-            verificationTokenExpires: { $gt: Date.now() } 
-        });
-        console.log(token);
+  try {
+    const user = await Corporate.findOne({
+      verificationToken: token,
+      verificationTokenExpires: { $gt: Date.now() }
+    });
+    console.log(token);
 
-        if (!user) {
-            req.flash('error_msg', 'Invalid or expired verification link');
-            return res.redirect(`https://medxbay.com`);
-        }
-
-        user.isVerified = true;
-        user.verificationToken = undefined;
-        user.verificationTokenExpires = undefined;
-        await user.save();
-
-        await sendWelcomeEmail(user.corporateName, user.email, 'corporate');
-
-        req.flash('success_msg', 'Your account has been verified. You can now log in.');
-        return res.redirect(`${process.env.REACT_APP_BASE_URL}/login`);
-    } catch (err) {
-        console.error('Error in corporate email verification:', err);
-        req.flash('error_msg', 'Server error');
-        res.redirect(`${process.env.REACT_APP_BASE_URL}/corporate/signup`);
+    if (!user) {
+      req.flash('error_msg', 'Invalid or expired verification link');
+      return res.redirect(`https://medxbay.com`);
     }
+
+    user.isVerified = true;
+    user.verificationToken = undefined;
+    user.verificationTokenExpires = undefined;
+    await user.save();
+
+    await sendWelcomeEmail(user.corporateName, user.email, 'corporate');
+
+    req.flash('success_msg', 'Your account has been verified. You can now log in.');
+    return res.redirect(`${process.env.REACT_APP_BASE_URL}/login`);
+  } catch (err) {
+    console.error('Error in corporate email verification:', err);
+    req.flash('error_msg', 'Server error');
+    res.redirect(`${process.env.REACT_APP_BASE_URL}/corporate/signup`);
+  }
 });
 
-  router.get('/signup', (req, res) => {
-    res.render('corporateSignup'); 
-  });
-  
-  router.post('/signup', async (req, res) => {
-    const { corporateName, email, mobileNumber, password } = req.body;
-  
-    try {
-      const existingCorporate = await Corporate.findOne({ email });
-      if (existingCorporate) {
-        return res.status(400).json({ message: 'Email already registered' });
-      }
-  
-      const hashedPassword = await bcrypt.hash(password, 10);
-  
-      const token = generateVerificationToken();
-      const tokenExpires = Date.now() + 3600000; 
-  
-      const newCorporate = new Corporate({
-        corporateName,
-        email,
-        mobileNumber,
-        password: hashedPassword,
-        verificationToken: token,
-        verificationTokenExpires: tokenExpires, 
-        isVerified: false,
-        role: 'corporate',
-      });
-  
-      await newCorporate.save();
-  
-      
-      await sendVerificationEmail(corporateName, email, token, 'corporate');
-  
-    
-      return res.redirect(`/corporate/login`);
-    } catch (error) {
-      console.error(error);
-      res.status(500).json({ message: 'Server error' });
+router.get('/signup', (req, res) => {
+  res.render('corporateSignup');
+});
+
+router.post('/signup', async (req, res) => {
+  const { corporateName, email, mobileNumber, password } = req.body;
+
+  try {
+    const existingCorporate = await Corporate.findOne({ email });
+    if (existingCorporate) {
+      return res.status(400).json({ message: 'Email already registered' });
     }
-  });
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    const token = generateVerificationToken();
+    const tokenExpires = Date.now() + 3600000;
+
+    const newCorporate = new Corporate({
+      corporateName,
+      email,
+      mobileNumber,
+      password: hashedPassword,
+      verificationToken: token,
+      verificationTokenExpires: tokenExpires,
+      isVerified: false,
+      role: 'corporate',
+    });
+
+    await newCorporate.save();
+
+
+    await sendVerificationEmail(corporateName, email, token, 'corporate');
+
+
+    return res.redirect(`/corporate/login`);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
 
 
 router.get('/login', (req, res) => {
-  res.json({ 
+  res.json({
     messages: {
-        success: req.flash('success_msg'),
-        error: req.flash('error_msg')
+      success: req.flash('success_msg'),
+      error: req.flash('error_msg')
     }
-});
   });
-  
+});
+
 router.post('/login', async (req, res) => {
-    const { email, password } = req.body;
+  const { email, password } = req.body;
 
-    try {
-        const corporate = await Corporate.findOne({ email: email });
+  try {
+    const corporate = await Corporate.findOne({ email: email });
 
-        if (!corporate) {
-            req.flash('error_msg', 'Invalid email or password');
-            return res.redirect('/corporate/login');
-        }
-
-        if (!await bcrypt.compare(password, corporate.password)) {
-            req.flash('error_msg', 'Invalid email or password');
-            return res.redirect('/corporate/login');
-        }
-
-        if (!corporate.isVerified) {
-            req.flash('error_msg', 'Please verify your account first');
-            return res.redirect('/corporate/login');
-        }
-
-        req.session.corporateId = corporate._id;
-        console.log(req.session.corporateId); 
-        req.flash('success_msg', 'Login successful!');
-        res.redirect('/corporate/corporate-home'); 
-    } catch (err) {
-        console.error('Error in corporate login:', err);
-        req.flash('error_msg', 'Server error');
-        res.redirect('/corporate/login');
+    if (!corporate) {
+      req.flash('error_msg', 'Invalid email or password');
+      return res.redirect('/corporate/login');
     }
+
+    if (!await bcrypt.compare(password, corporate.password)) {
+      req.flash('error_msg', 'Invalid email or password');
+      return res.redirect('/corporate/login');
+    }
+
+    if (!corporate.isVerified) {
+      req.flash('error_msg', 'Please verify your account first');
+      return res.redirect('/corporate/login');
+    }
+
+    req.session.corporateId = corporate._id;
+    console.log(req.session.corporateId);
+    req.flash('success_msg', 'Login successful!');
+    res.redirect('/corporate/corporate-home');
+  } catch (err) {
+    console.error('Error in corporate login:', err);
+    req.flash('error_msg', 'Server error');
+    res.redirect('/corporate/login');
+  }
 });
 
 router.get('/corporate-home', async (req, res) => {
   try {
-    const corporateId = req.session.corporateId; 
+    const corporateId = req.session.corporateId;
     console.log(req.session.corporateId);
     const corporate = await Corporate.findById(corporateId).populate('doctors');
 
     if (!corporate) {
       req.flash('error_msg', 'Corporate not found');
-      return res.redirect('/corporate/login'); 
+      return res.redirect('/corporate/login');
     }
 
     res.render('corporateHome', {
       corporate,
       doctors: corporate.doctors,
-      followerCount: corporate.followers.length 
+      followerCount: corporate.followers.length
     });
   } catch (err) {
     console.error('Error fetching corporate details:', err);
@@ -252,6 +252,8 @@ router.get('/corporate-home', async (req, res) => {
 router.get('/profile', async (req, res) => {
   try {
     const corporateId = req.session.user._id;
+    console.log(corporateId);
+    
 
     const corporate = await Corporate.findById(corporateId)
       .populate('doctors')
@@ -274,19 +276,26 @@ router.get('/profile', async (req, res) => {
       authorId: { $in: corporate.doctors.map((doctor) => doctor._id) },
       verificationStatus: "Verified",
     })
-      .select('title description image conditions authorId') 
+      .select('title description image conditions authorId')
       .populate({
         path: 'authorId',
         model: 'Doctor',
         select: 'name profilePicture',
       });
+      const inviteLinks = corporate.doctors.map(doctor => {
+        return {
+          doctorId: doctor._id,
+          inviteLink: `${process.env.NODE_URL}/doctor/accept-invite/${corporateId}/${doctor._id}`
+        };
+      });
 
     const responseData = {
-      corporate:corporate,
+      corporate: corporate,
       doctors: corporate.doctors,
       blogs: verifiedBlogs,
       doctorReviews: corporate.doctorReviews,
       patientReviews: corporate.patientReviews,
+      inviteLinks,  
     };
 
     res.status(200).json({ success: true, data: responseData });
@@ -319,22 +328,22 @@ router.get('/edit-profile', async (req, res) => {
 });
 router.post('/edit-profile', upload.fields([{ name: 'profileImage' }, { name: 'coverPhoto' }]), async (req, res) => {
   const {
-      corporateName,
-      email,
-      mobileNumber,
-      alternateContactNumber,
-      companyName,
-      businessRegistrationNumber,
-      taxIdentificationNumber,
-      businessType,
-      street,
-      city,
-      state,
-      zipCode,
-      country,
-      tagline,
-      address,
-      overview
+    corporateName,
+    email,
+    mobileNumber,
+    alternateContactNumber,
+    companyName,
+    businessRegistrationNumber,
+    taxIdentificationNumber,
+    businessType,
+    street,
+    city,
+    state,
+    zipCode,
+    country,
+    tagline,
+    address,
+    overview
   } = req.body;
 
   const updateData = {};
@@ -353,38 +362,38 @@ router.post('/edit-profile', upload.fields([{ name: 'profileImage' }, { name: 'c
 
   // Handle address if provided
   if (address) {
-      try {
-          updateData.address = JSON.parse(address);
-      } catch (err) {
-          console.error('Invalid JSON for address:', address);
-          return res.status(400).json({ error: 'Invalid address format' });
-      }
+    try {
+      updateData.address = JSON.parse(address);
+    } catch (err) {
+      console.error('Invalid JSON for address:', address);
+      return res.status(400).json({ error: 'Invalid address format' });
+    }
   }
 
   // Handle file uploads
   if (req.files && req.files['profileImage']) {
     updateData.profilePicture = {
-        data: req.files['profileImage'][0].buffer,
-        contentType: req.files['profileImage'][0].mimetype,
+      data: req.files['profileImage'][0].buffer,
+      contentType: req.files['profileImage'][0].mimetype,
     };
-}
+  }
 
-if (req.files && req.files['coverPhoto']) {
+  if (req.files && req.files['coverPhoto']) {
     updateData.coverPhoto = {
-        data: req.files['coverPhoto'][0].buffer,
-        contentType: req.files['coverPhoto'][0].mimetype,
+      data: req.files['coverPhoto'][0].buffer,
+      contentType: req.files['coverPhoto'][0].mimetype,
     };
-}
+  }
 
   try {
-      // Update the user's profile with only the provided fields
-      const updatedProfile = await Corporate.findByIdAndUpdate(req.session.user._id, updateData, { new: true });
-      req.flash('success_msg', 'Profile updated successfully');
-      res.status(200).json({ message: 'Profile updated successfully', updatedProfile });
+    // Update the user's profile with only the provided fields
+    const updatedProfile = await Corporate.findByIdAndUpdate(req.session.user._id, updateData, { new: true });
+    req.flash('success_msg', 'Profile updated successfully');
+    res.status(200).json({ message: 'Profile updated successfully', updatedProfile });
   } catch (err) {
-      console.error('Error updating profile:', err);
-      req.flash('error_msg', 'Failed to update profile');
-      res.status(500).json({ error: 'Failed to update profile' });
+    console.error('Error updating profile:', err);
+    req.flash('error_msg', 'Failed to update profile');
+    res.status(500).json({ error: 'Failed to update profile' });
   }
 });
 
@@ -407,7 +416,7 @@ router.post('/add-specialty', upload.single('image'), async (req, res) => {
 
     const corporate = await Corporate.findById(req.session?.user._id);
     console.log(corporate);
-    
+
     corporate.corporateSpecialties.push(newSpecialty);
     await corporate.save();
 
@@ -423,7 +432,7 @@ router.get('/add-doctors', async (req, res) => {
 
   try {
     const doctors = await Doctor.find({
-      email: { $regex: searchEmail, $options: 'i' }, 
+      email: { $regex: searchEmail, $options: 'i' },
     });
 
     res.render('add-doctors', {
@@ -439,7 +448,7 @@ router.get('/add-doctors', async (req, res) => {
 
 router.post('/add-doctor/:doctorId', async (req, res) => {
   const doctorId = req.params.doctorId;
-  const corporateId = req.session.corporateId; 
+  const corporateId = req.session.corporateId;
 
   try {
     const corporate = await Corporate.findById(corporateId);
@@ -468,7 +477,7 @@ router.post('/add-doctor/:doctorId', async (req, res) => {
       corporateName: corporate.corporateName,
       requestStatus: 'pending',
     });
-    doctor.faqs = doctor.faqs || []; 
+    doctor.faqs = doctor.faqs || [];
 
     doctor.faqs.push({
       question: 'What is your consultation fee?',
@@ -497,7 +506,7 @@ router.post('/update-doctor-review-visibility', async (req, res) => {
       { $set: { 'doctorReviews.$.showOnPage': showOnPageBool } }
     );
 
-    res.redirect('/corporate/profile');  
+    res.redirect('/corporate/profile');
   } catch (err) {
     console.error('Error updating doctor review visibility:', err);
     req.flash('error_msg', 'Error updating doctor review visibility');
@@ -516,7 +525,7 @@ router.post('/update-patient-review-visibility', async (req, res) => {
       { $set: { 'patientReviews.$.showOnPage': showOnPageBool } }
     );
 
-    res.redirect('/corporate/profile');  
+    res.redirect('/corporate/profile');
   } catch (err) {
     console.error('Error updating patient review visibility:', err);
     req.flash('error_msg', 'Error updating patient review visibility');
@@ -530,7 +539,7 @@ router.get('/followers', async (req, res) => {
 
     const corporate = await Corporate.findById(corporateId).populate({
       path: 'followers',
-      select: 'name profilePicture', 
+      select: 'name profilePicture',
     });
     console.log(corporate);
 
@@ -561,9 +570,9 @@ router.get('/insights', async (req, res) => {
 
     const linkedDoctors = await Doctor.find({
       corporateRequests: {
-        $elemMatch: { 
-          corporateId: corporateId, 
-          requestStatus: 'accepted' 
+        $elemMatch: {
+          corporateId: corporateId,
+          requestStatus: 'accepted'
         }
       }
     });
@@ -593,19 +602,19 @@ router.get('/insights', async (req, res) => {
       }
     ]).then(result => result[0]?.uniquePatients || 0);
 
-const totalBlogs = await Blog.countDocuments({
-  authorId: { $in: doctorIds }
-});
+    const totalBlogs = await Blog.countDocuments({
+      authorId: { $in: doctorIds }
+    });
 
-const blogsVerified = await Blog.countDocuments({
-  authorId: { $in: doctorIds },
-  verificationStatus: 'Verified' 
-});
+    const blogsVerified = await Blog.countDocuments({
+      authorId: { $in: doctorIds },
+      verificationStatus: 'Verified'
+    });
 
-const blogsPendingRequest = await Blog.countDocuments({
-  authorId: { $in: doctorIds },
-  verificationStatus: 'Pending' 
-});
+    const blogsPendingRequest = await Blog.countDocuments({
+      authorId: { $in: doctorIds },
+      verificationStatus: 'Pending'
+    });
 
     const totalConsultations = await Booking.countDocuments({
       doctor: { $in: doctorIds },
@@ -674,7 +683,7 @@ const blogsPendingRequest = await Blog.countDocuments({
       bookingRates,
       bookingFilter,
       corporateId,
-      linkedDoctors 
+      linkedDoctors
     });
   } catch (err) {
     console.error('Error fetching corporate insights:', err.message);
@@ -682,17 +691,79 @@ const blogsPendingRequest = await Blog.countDocuments({
   }
 });
 
+const sendInvitationEmail = (email, inviteLink, hospitalName) => {
+  const transporter = nodemailer.createTransport({
+      service: 'gmail',
+      auth: {
+          user: process.env.EMAIL_USER,
+          pass: process.env.EMAIL_PASSWORD,
+      },
+  });
+
+  const mailOptions = {
+      from: process.env.EMAIL_USER,
+      to: email,
+      subject: `Invitation to Join ${hospitalName} Hospital Network`, 
+      html: `
+          <p>Hello,</p>
+          <p>We would like to invite you to join the ${hospitalName} hospital network. Please follow the steps below:</p>
+          <ul>
+              <li>If you are not a member yet, <a href="https://beta.medxbay.com/signup">register here</a> and fill out your details.</li>
+              <li>If you are already a member, <a href="https://beta.medxbay.com/login">log in here</a>.</li>
+              <li>After logging in, click the following invite link to join the hospital: <a href="${inviteLink}">${inviteLink}</a></li>
+          </ul>
+          <p>Best regards,</p>
+          <p>Your ${hospitalName} Team</p>
+      `,
+  };
+
+  return new Promise((resolve, reject) => {
+      transporter.sendMail(mailOptions, (error, info) => {
+          if (error) {
+              reject(error);
+          } else {
+              resolve(info);
+          }
+      });
+  });
+};
+router.post('/send-invite', async (req, res) => {
+  const {email, inviteLink } = req.body;
+  
+  const corporateId = req.session?.user?._id;
+  console.log(corporateId);
+
+  if (!email || !inviteLink || !corporateId) {
+    return res.status(400).json({ message: 'Email, invite link, and corporate ID are required' });
+  }
+
+  try {
+    const corporate = await Corporate.findById(corporateId);
+    if (!corporate) {
+      return res.status(404).json({ message: 'Corporate not found' });
+    }
+
+    const hospitalName = corporate.corporateName;
+    const info = await sendInvitationEmail(email, inviteLink, hospitalName);
+
+    return res.status(200).json({ message: 'Invitation sent successfully', info });
+  } catch (error) {
+    console.log(error);
+    return res.status(500).json({ message: 'Error sending email', error });
+  }
+});
+
 router.get('/logout', (req, res) => {
   req.session.destroy(err => {
-      if (err) {
-          console.error("Error destroying session:", err);
-          return res.status(500).send("Failed to log out.");
-      }
-      res.redirect('/corporate/login'); 
+    if (err) {
+      console.error("Error destroying session:", err);
+      return res.status(500).send("Failed to log out.");
+    }
+    res.redirect('/corporate/login');
   });
 });
 
 
-  
+
 
 module.exports = router;

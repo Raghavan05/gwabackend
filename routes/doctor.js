@@ -8,7 +8,7 @@ const { google } = require('googleapis');
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const Blog = require('../models/Blog');
 const Doctor = require('../models/Doctor');
-const Admin = require('../models/Admin'); 
+const Admin = require('../models/Admin');
 const Booking = require('../models/Booking');
 const Chat = require('../models/Chat');
 const Patient = require('../models/Patient');
@@ -17,6 +17,7 @@ const Notification = require('../models/Notification');
 const Insurance = require('../models/Insurance');
 const Specialty = require('../models/Specialty');
 const Condition = require('../models/Condition');
+const Corporate = require('../models/Corporate');
 
 require('dotenv').config();
 
@@ -33,13 +34,13 @@ router.use(methodOverride('_method'));
 function isLoggedIn(req, res, next) {
     if (req.session && req.session.user) {
         req.user = req.session.user;
-      return next();
+        return next();
     } else {
-      res.status(401).json({ success: false, message: 'Unauthorized access attempt.' });
+        res.status(401).json({ success: false, message: 'Unauthorized access attempt.' });
     }
-  }
-  
-  
+}
+
+
 
 function checkSubscription(req, res, next) {
     const user = req.session.user;
@@ -86,46 +87,46 @@ router.get('/doctor-index', isDoctor, isLoggedIn, async (req, res) => {
 
 router.get('/profile', isLoggedIn, async (req, res) => {
     try {
-      const doctorEmail = req.session.user.email;
-      console.log('Doctor email from session:', doctorEmail);  // Debugging log
-  
-      const doctor = await Doctor.findOne({ email: doctorEmail }).lean();
-      if (!doctor) {
-        return res.status(404).send('Doctor not found');
-      }
-      res.json({doctor });
+        const doctorEmail = req.session.user.email;
+        console.log('Doctor email from session:', doctorEmail);  // Debugging log
+
+        const doctor = await Doctor.findOne({ email: doctorEmail }).lean();
+        if (!doctor) {
+            return res.status(404).send('Doctor not found');
+        }
+        res.json({ doctor });
     } catch (err) {
-      console.error(err.message);
-      res.status(500).send('Server Error');
+        console.error(err.message);
+        res.status(500).send('Server Error');
     }
-  });
-  
-  router.get('/edit', isLoggedIn, async (req, res) => {
+});
+
+router.get('/edit', isLoggedIn, async (req, res) => {
     try {
-      if (!req.session.user || !req.session.user.email) {
-        return res.status(401).json({ error: 'Unauthorized access' });
-      }
-  
-      const doctorEmail = req.session.user.email;
-      console.log('Doctor email from session in edit route:', doctorEmail);  
-  
-      const doctor = await Doctor.findOne({ email: doctorEmail }).lean();
-      if (!doctor) {
-        return res.status(404).json({ error: 'Doctor not found' });
-      }
-  
-      if (!doctor.hospitals) {
-        doctor.hospitals = [];
-      }
-  
-      res.json(doctor);
+        if (!req.session.user || !req.session.user.email) {
+            return res.status(401).json({ error: 'Unauthorized access' });
+        }
+
+        const doctorEmail = req.session.user.email;
+        console.log('Doctor email from session in edit route:', doctorEmail);
+
+        const doctor = await Doctor.findOne({ email: doctorEmail }).lean();
+        if (!doctor) {
+            return res.status(404).json({ error: 'Doctor not found' });
+        }
+
+        if (!doctor.hospitals) {
+            doctor.hospitals = [];
+        }
+
+        res.json(doctor);
     } catch (err) {
-      console.error(err.message);
-      res.status(500).json({ error: 'Server Error' });
+        console.error(err.message);
+        res.status(500).json({ error: 'Server Error' });
     }
-  });
-  
-  router.get('/profile/update', isLoggedIn, async (req, res) => {
+});
+
+router.get('/profile/update', isLoggedIn, async (req, res) => {
     try {
         const doctorEmail = req.session.user.email;
         const doctor = await Doctor.findOne({ email: doctorEmail }).lean();
@@ -133,7 +134,7 @@ router.get('/profile', isLoggedIn, async (req, res) => {
 
         const allInsurances = await Insurance.find({}).select('_id name logo');
         const insurances = await Insurance.find({ '_id': { $in: doctor.insurances } }).select('_id name logo');
-        
+
         const allSpecialties = await Specialty.find({}).select('_id name');
         const allConditions = await Condition.find({}).select('_id name');
 
@@ -204,11 +205,11 @@ router.post('/profile/update', isLoggedIn, async (req, res) => {
             };
         }
 
-    
+
         if (req.body.name) updateData.name = req.body.name;
         if (req.body.title) updateData.title = req.body.title;
         if (req.body.zip) updateData.zip = req.body.zip
-        
+
         if (req.body.licenseNumber) updateData.licenseNumber = req.body.licenseNumber
 
         if (req.body.aboutMe) updateData.aboutMe = req.body.aboutMe;
@@ -246,9 +247,9 @@ router.post('/profile/update', isLoggedIn, async (req, res) => {
 
         if (req.body.faqs) {
             let faqs = [];
-        
+
             if (Array.isArray(req.body.faqs)) {
-     
+
                 faqs = req.body.faqs.slice(0, 4).map((faq) => ({
                     question: faq.question,
                     answer: faq.answer
@@ -259,10 +260,10 @@ router.post('/profile/update', isLoggedIn, async (req, res) => {
                     answer: req.body.faqs.answer
                 }];
             }
-        
+
             updateData.faqs = faqs;
         }
-        
+
 
         if (req.body.hospitals) {
             let hospitals = [];
@@ -394,9 +395,9 @@ async function createGoogleCalendarEvent(booking) {
                 }
             }
         } : undefined,
-        guestsCanModify: true, 
-        guestsCanInviteOthers: true, 
-        guestsCanSeeOtherGuests: true, 
+        guestsCanModify: true,
+        guestsCanInviteOthers: true,
+        guestsCanSeeOtherGuests: true,
     };
 
     try {
@@ -556,7 +557,7 @@ router.post('/bookings/:id', isLoggedIn, async (req, res) => {
                 await sendAppointmentEmail(booking.patient.email, booking.patient.name, emailSubject, emailContent);
 
                 chatMessage = `We regret to inform you that your appointment with Dr. ${doctor.name} on ${booking.date.toDateString()} at ${booking.time} has been rejected.`;
-                
+
                 await Notification.create({
                     userId: booking.patient._id,
                     message: chatMessage,
@@ -575,11 +576,11 @@ router.post('/bookings/:id', isLoggedIn, async (req, res) => {
 
 router.get('/completed-bookings', isLoggedIn, checkSubscription, async (req, res) => {
     try {
-        const doctorId = req.session.user._id; 
+        const doctorId = req.session.user._id;
         const completedBookings = await Booking.find({ doctor: doctorId, status: 'completed' })
-                                               .populate('patient') 
-                                               .populate('doctor') // Ensure doctor is populated
-                                               .sort({ date: 'desc' }); 
+            .populate('patient')
+            .populate('doctor') // Ensure doctor is populated
+            .sort({ date: 'desc' });
 
         res.json({ bookings: completedBookings });
     } catch (error) {
@@ -597,8 +598,8 @@ router.get('/reviews/:doctorId', isLoggedIn, async (req, res) => {
 
         const doctor = await Doctor.findById(doctorId)
             .populate({
-                path: 'reviews.patientId', 
-                select: 'name' 
+                path: 'reviews.patientId',
+                select: 'name'
             });
 
         if (!doctor) {
@@ -623,7 +624,7 @@ router.get('/bookings/:id/prescription', isLoggedIn, checkSubscription, async (r
     try {
         const bookingId = req.params.id;
         const booking = await Booking.findById(bookingId).populate('patient').populate('doctor');
-        
+
         if (!booking) {
             return res.status(404).send('Booking not found');
         }
@@ -684,7 +685,7 @@ router.post('/prescriptions/upload', isLoggedIn, checkSubscription, async (req, 
         await prescription.save();
 
         const downloadLink = `${req.protocol}://${req.get('host')}/patient/prescriptions/${prescription._id}/download`;
-  
+
         const chatMessage = `You have a new prescription from Dr. ${doctorName}. You can download it using the following link: ${downloadLink}`;
         await Chat.findOneAndUpdate(
             { doctorId: doctorId, patientId: patientId },
@@ -722,7 +723,7 @@ router.get('/manage-time-slots', isLoggedIn, checkSubscription, async (req, res)
     try {
         const doctorEmail = req.session.user.email;
         const doctor = await Doctor.findOne({ email: doctorEmail }).populate('timeSlots.hospital').exec();
-        
+
         if (!doctor) {
             return res.status(404).send('Doctor not found');
         }
@@ -761,9 +762,9 @@ router.get('/manage-time-slots', isLoggedIn, checkSubscription, async (req, res)
                 'July', 'August', 'September', 'October', 'November', 'December'
             ]
         };
-        
-            res.json(data);
-        
+
+        res.json(data);
+
     } catch (err) {
         console.error(err.message);
         res.status(500).send('Server Error');
@@ -885,7 +886,7 @@ router.post('/add-time-slot', isLoggedIn, checkSubscription, async (req, res) =>
 
 
 
-    
+
 async function createGoogleMeetLink(booking) {
     const oauth2Client = new google.auth.OAuth2(
         process.env.GOOGLE_CLIENT_ID,
@@ -962,7 +963,7 @@ async function sendAppointmentEmail(to, name, subject, content) {
 
 router.get('/calendar', isLoggedIn, checkSubscription, async (req, res) => {
     try {
-        const doctorId = req.session.user._id; 
+        const doctorId = req.session.user._id;
         const doctor = await Doctor.findById(doctorId);
         if (!doctor) {
             return res.status(404).send('Doctor not found');
@@ -1003,7 +1004,7 @@ router.get('/calendar', isLoggedIn, checkSubscription, async (req, res) => {
             daysInMonth,
             bookings,
             today: currentDate,
-            currentTime, 
+            currentTime,
             months: [
                 'January', 'February', 'March', 'April', 'May', 'June',
                 'July', 'August', 'September', 'October', 'November', 'December'
@@ -1024,25 +1025,25 @@ router.get('/subscribe', isLoggedIn, async (req, res) => {
 
 router.post('/subscribe', isLoggedIn, async (req, res) => {
     try {
-    const { subscriptionType ,subscriptionDuration} = req.body;
-    console.log(req.body);
-    
-    const paymentDetails = req.body.paymentDetails;
-    const doctorId = req.session.user._id; 
-    const amount = parseInt(paymentDetails.amount, 10);
-    console.log(amount);
-    
+        const { subscriptionType, subscriptionDuration } = req.body;
+        console.log(req.body);
+
+        const paymentDetails = req.body.paymentDetails;
+        const doctorId = req.session.user._id;
+        const amount = parseInt(paymentDetails.amount, 10);
+        console.log(amount);
+
         if (isNaN(amount) || amount <= 0) {
             return res.json(400).send('Invalid payment amount');
         }
 
         const doctor = await Doctor.findById(doctorId);
 
-        
+
         if (doctor.subscriptionType !== 'Standard') {
             return res.status(403).send('You already have an active subscription. You cannot subscribe again until the current plan ends.');
         }
-    
+
         const session = await stripe.checkout.sessions.create({
             payment_method_types: ['card'],
             line_items: [{
@@ -1051,7 +1052,7 @@ router.post('/subscribe', isLoggedIn, async (req, res) => {
                     product_data: {
                         name: `${subscriptionType} Subscription`,
                     },
-                    unit_amount: amount, 
+                    unit_amount: amount,
                 },
                 quantity: 1,
             }],
@@ -1059,58 +1060,58 @@ router.post('/subscribe', isLoggedIn, async (req, res) => {
             success_url: `${req.protocol}://${req.get('host')}/api/doctor/subscription-success?session_id={CHECKOUT_SESSION_ID}`,
             cancel_url: `${req.protocol}://${req.get('host')}/api/doctor/subscription-failure`,
         });
-    
+
         req.session.subscriptionInfo = {
             doctorId,
             subscriptionType,
-            subscriptionDuration,  
+            subscriptionDuration,
             paymentDetails: {
                 amount: amount,
                 currency: 'usd'
             }
         };
-    
+
         res.json(session.url);
     } catch (error) {
         console.error(error.message);
         res.json(500).send('Server Error');
     }
-    });
-    
-    
-    router.get('/subscription-success', async (req, res) => {
-        try {
-            const session = await stripe.checkout.sessions.retrieve(req.query.session_id);
-    
-            if (session.payment_status === 'paid') {
-                const { doctorId, subscriptionType, paymentDetails, subscriptionDuration } = req.session.subscriptionInfo;
-                const subscriptionDate = new Date();
-    
-                const paymentDetailsString = JSON.stringify(paymentDetails);
-    
-                const updatedDoctor = await Doctor.findByIdAndUpdate(
-                    doctorId,
-                    {
-                        subscription: 'Pending',
-                        subscriptionType,
-                        paymentDetails: paymentDetailsString,
-                        subscriptionVerification: 'Verified',
-                        subscriptionDate,
-                        subscriptionDuration: subscriptionDuration === 'annual' ? 'annual' : 'monthly'
-                    },
-                    { new: true }
-                );
-    
-                res.render('subscriptionSuccess', { doctor: updatedDoctor });
-            } else {
-                res.status(400).send('Payment was not successful');
-            }
-        } catch (error) {
-            console.error(error.message);
-            res.status(500).send('Server Error');
+});
+
+
+router.get('/subscription-success', async (req, res) => {
+    try {
+        const session = await stripe.checkout.sessions.retrieve(req.query.session_id);
+
+        if (session.payment_status === 'paid') {
+            const { doctorId, subscriptionType, paymentDetails, subscriptionDuration } = req.session.subscriptionInfo;
+            const subscriptionDate = new Date();
+
+            const paymentDetailsString = JSON.stringify(paymentDetails);
+
+            const updatedDoctor = await Doctor.findByIdAndUpdate(
+                doctorId,
+                {
+                    subscription: 'Pending',
+                    subscriptionType,
+                    paymentDetails: paymentDetailsString,
+                    subscriptionVerification: 'Verified',
+                    subscriptionDate,
+                    subscriptionDuration: subscriptionDuration === 'annual' ? 'annual' : 'monthly'
+                },
+                { new: true }
+            );
+
+            res.render('subscriptionSuccess', { doctor: updatedDoctor });
+        } else {
+            res.status(400).send('Payment was not successful');
         }
-    });
-    
+    } catch (error) {
+        console.error(error.message);
+        res.status(500).send('Server Error');
+    }
+});
+
 
 router.get('/subscription-failure', (req, res) => {
     res.send('Subscription payment failed. Please try again.');
@@ -1118,8 +1119,8 @@ router.get('/subscription-failure', (req, res) => {
 
 router.get('/blog', async (req, res) => {
     try {
-        const conditions = await Condition.find(); 
-        
+        const conditions = await Condition.find();
+
         res.json({ conditions });
     } catch (err) {
         console.error(err);
@@ -1129,7 +1130,7 @@ router.get('/blog', async (req, res) => {
 
 
 router.post('/blog', upload.fields([
-    { name: 'image', maxCount: 1 }, 
+    { name: 'image', maxCount: 1 },
     { name: 'images', maxCount: 10 }
 ]), async (req, res) => {
     try {
@@ -1155,10 +1156,10 @@ router.post('/blog', upload.fields([
 
         const newBlog = new Blog({
             title,
-            author: authorName,   
+            author: authorName,
             description,
             authorEmail,
-            authorId,            
+            authorId,
             categories,
             hashtags,
             priority,
@@ -1240,11 +1241,11 @@ router.get('/blogs', isDoctor, isLoggedIn, async (req, res) => {
             verificationStatus: 'Verified',
             categories: { $in: categories }
         })
-        .limit(5)
-        .lean();
+            .limit(5)
+            .lean();
 
-        res.json({ 
-            blogs: verifiedBlogs, 
+        res.json({
+            blogs: verifiedBlogs,
             searchQuery: req.query.search,
             categories,
             hashtags,
@@ -1267,18 +1268,18 @@ router.get('/blogs', isDoctor, isLoggedIn, async (req, res) => {
 
 router.get('/profile/blogs', isLoggedIn, async (req, res) => {
     try {
-      const doctorEmail = req.session.user.email; 
-  
-      const blogs = await Blog.find({ authorEmail: doctorEmail });
-  
-      res.json({ blogs });
-    } catch (err) {
-      console.error(err.message);
-      res.status(500).send('Server Error');
-    }
-  });
+        const doctorEmail = req.session.user.email;
 
-  router.get('/blogs/edit/:id', isLoggedIn, async (req, res) => {
+        const blogs = await Blog.find({ authorEmail: doctorEmail });
+
+        res.json({ blogs });
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).send('Server Error');
+    }
+});
+
+router.get('/blogs/edit/:id', isLoggedIn, async (req, res) => {
     try {
         const blog = await Blog.findById(req.params.id);
         const conditions = await Condition.find();
@@ -1301,13 +1302,13 @@ router.get('/profile/blogs', isLoggedIn, async (req, res) => {
         return res.status(500).json({ message: 'Server Error' });
     }
 });
-  
-  
-  
+
+
+
 router.post('/blogs/edit/:id', isLoggedIn, checkSubscription, upload.single('image'), async (req, res) => {
     try {
         const blog = await Blog.findById(req.params.id);
-        
+
         if (!blog) {
             return res.status(404).send('Blog not found');
         }
@@ -1363,11 +1364,11 @@ router.get('/dashboard', isLoggedIn, checkSubscription, async (req, res) => {
         const chats = await Chat.find({ doctorId: doctor._id })
             .populate('patientId', 'name profilePicture') // Assuming patient has a profilePicture field
             .sort({ updatedAt: -1 })
-            .lean(); 
+            .lean();
 
         // Calculate unread message count for each chat
         chats.forEach(chat => {
-            chat.unreadCount = chat.messages.filter(message => 
+            chat.unreadCount = chat.messages.filter(message =>
                 !message.read && message.senderId.toString() !== doctor._id.toString()
             ).length;
         });
@@ -1382,48 +1383,48 @@ router.get('/dashboard', isLoggedIn, checkSubscription, async (req, res) => {
 
 router.post('/chats/:chatId/send-message', isLoggedIn, async (req, res) => {
     try {
-      const { message } = req.body;
-      const doctor = await Doctor.findOne({ email: req.session.user.email });
-      const chatId = req.params.chatId;
-  
-      if (!doctor) {
-        return res.status(404).send('Doctor not found');
-      }
-  
-      let chat = await Chat.findOneAndUpdate(
-        { _id: chatId, doctorId: doctor._id },
-        { $push: { messages: { senderId: doctor._id, text: message, timestamp: new Date(), read: false } } },
-        { new: true }
-      );
-  
-      if (!chat) {
-        return res.status(404).send('Chat not found');
-      }
-  
-      console.log("Chat ID:", chat._id); 
-  
-      const patient = await Patient.findById(chat.patientId);
-  
-      if (patient) {
-        await Notification.create({
-          userId: patient._id,
-          message: `New message from Dr. ${doctor.name}: ${message}`,
-          type: 'chat',
-          chatId: chat._id, 
-          read: false,
-          createdAt: new Date()
-        });
-  
-        console.log("Notification created with chat ID:", chat._id);
-      }
-  
-      res.json(`/doctor/chat/${chat._id}`);
-  
+        const { message } = req.body;
+        const doctor = await Doctor.findOne({ email: req.session.user.email });
+        const chatId = req.params.chatId;
+
+        if (!doctor) {
+            return res.status(404).send('Doctor not found');
+        }
+
+        let chat = await Chat.findOneAndUpdate(
+            { _id: chatId, doctorId: doctor._id },
+            { $push: { messages: { senderId: doctor._id, text: message, timestamp: new Date(), read: false } } },
+            { new: true }
+        );
+
+        if (!chat) {
+            return res.status(404).send('Chat not found');
+        }
+
+        console.log("Chat ID:", chat._id);
+
+        const patient = await Patient.findById(chat.patientId);
+
+        if (patient) {
+            await Notification.create({
+                userId: patient._id,
+                message: `New message from Dr. ${doctor.name}: ${message}`,
+                type: 'chat',
+                chatId: chat._id,
+                read: false,
+                createdAt: new Date()
+            });
+
+            console.log("Notification created with chat ID:", chat._id);
+        }
+
+        res.json(`/doctor/chat/${chat._id}`);
+
     } catch (error) {
-      console.error("Error:", error.message);
-      res.status(500).send('Server Error');
+        console.error("Error:", error.message);
+        res.status(500).send('Server Error');
     }
-  });
+});
 
 router.get('/chat/:id', isLoggedIn, checkSubscription, async (req, res) => {
     try {
@@ -1438,8 +1439,8 @@ router.get('/chat/:id', isLoggedIn, checkSubscription, async (req, res) => {
         });
 
         const chat = await Chat.findById(chatId)
-        .populate('patientId', 'name email profilePicture') 
-        .lean();
+            .populate('patientId', 'name email profilePicture')
+            .lean();
 
 
         // console.log('Fetched Chat Object:', chat);
@@ -1465,9 +1466,9 @@ router.get('/chat/:id', isLoggedIn, checkSubscription, async (req, res) => {
         console.log('Updated Chat Data:', chat);
 
         // Send JSON response with chat data
-        res.json({ 
-            chat, 
-            patientProfilePicture: chat.patientId.profilePicture 
+        res.json({
+            chat,
+            patientProfilePicture: chat.patientId.profilePicture
         });
 
 
@@ -1501,8 +1502,8 @@ router.get('/blogs/view/:id', async (req, res) => {
                 { categories: { $in: blog.categories } },
                 { hashtags: { $in: blog.hashtags } }
             ],
-            _id: { $ne: blog._id }, 
-            verificationStatus: "Verified" 
+            _id: { $ne: blog._id },
+            verificationStatus: "Verified"
         }).limit(5).lean();
 
         const mostReadPosts = await Blog.find({
@@ -1523,8 +1524,8 @@ router.get('/blogs/view/:id', async (req, res) => {
         const twitterShareUrl = `https://twitter.com/intent/tweet?url=${encodedBlogUrl}&text=${encodedTitle}`;
 
         res.render('DoctorViewBlog', {
-            blog, 
-            relatedPosts, 
+            blog,
+            relatedPosts,
             mostReadPosts,
             facebookShareUrl,
             blogImageBase64,
@@ -1535,15 +1536,15 @@ router.get('/blogs/view/:id', async (req, res) => {
         res.status(500).send('Server Error');
     }
 });
-  
-  router.post('/blogs/comment/:id', isLoggedIn, async (req, res) => {
+
+router.post('/blogs/comment/:id', isLoggedIn, async (req, res) => {
     try {
         const { comment } = req.body;
         const blogId = req.params.id;
         const blog = await Blog.findById(blogId);
         const authorEmail = req.session.user.email;
         const doctor = await Doctor.findOne({ email: authorEmail });
-  
+
         if (!blog) {
             return res.status(404).send('Blog not found');
         }
@@ -1553,13 +1554,13 @@ router.get('/blogs/view/:id', async (req, res) => {
             username: doctor.name,
             comment: comment,
             profilePicture: {
-                data: doctor.profilePicture.data, 
+                data: doctor.profilePicture.data,
                 contentType: doctor.profilePicture.contentType
             }
         });
-  
+
         await blog.save();
-  
+
         res.json({ message: 'Blog uploaded successfully' });
         // res.redirect(/doctor/blogs/view/${blogId});
     } catch (err) {
@@ -1568,191 +1569,191 @@ router.get('/blogs/view/:id', async (req, res) => {
     }
 });
 
-  router.get('/author/:id', async (req, res) => {
+router.get('/author/:id', async (req, res) => {
     try {
-      const authorId = req.params.id;
-  
-      let author = await Doctor.findById(authorId);
-  
-      if (!author) {
-        author = await Admin.findById(authorId);
-      }
-  
-      if (!author) {
-        return res.status(404).send('Author not found');
-      }
-  
-      const blogCount = await Blog.countDocuments({ authorId });
-  
-      res.render('doctor-author-info', {
-        author,
-        blogCount
-      });
+        const authorId = req.params.id;
+
+        let author = await Doctor.findById(authorId);
+
+        if (!author) {
+            author = await Admin.findById(authorId);
+        }
+
+        if (!author) {
+            return res.status(404).send('Author not found');
+        }
+
+        const blogCount = await Blog.countDocuments({ authorId });
+
+        res.render('doctor-author-info', {
+            author,
+            blogCount
+        });
     } catch (err) {
-      console.error(err.message);
-      res.status(500).send('Server Error');
-    }
-  });
-router.get('/priority-blogs', async (req, res) => {
-      try {
-        const blogs = await Blog.find({ priority: 'high', verificationStatus: 'Verified' }).lean();
-  
-        res.render('priorityblogs', { blogs });
-      } catch (err) {
         console.error(err.message);
         res.status(500).send('Server Error');
-      }
-    });
-  
+    }
+});
+router.get('/priority-blogs', async (req, res) => {
+    try {
+        const blogs = await Blog.find({ priority: 'high', verificationStatus: 'Verified' }).lean();
+
+        res.render('priorityblogs', { blogs });
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).send('Server Error');
+    }
+});
+
 router.get('/blogs', async (req, res) => {
     try {
-      let filter = { verificationStatus: 'Verified' }; 
-  
-      if (req.query.search) {
-        const regex = new RegExp(escapeRegex(req.query.search), 'gi'); 
-  
-        filter = {
-          verificationStatus: 'Verified',
-          $or: [
-            { title: regex },
-            { categories: regex },
-            { hashtags: regex }
-          ]
-        };
-      }
-  
-      const verifiedBlogs = await Blog.find(filter).lean();
-  
-      res.render('Doctorblogs', { blogs: verifiedBlogs, searchQuery: req.query.search });
-  
-    } catch (err) {
-      console.error(err.message);
-      res.status(500).send('Server Error');
-    }
-  });
+        let filter = { verificationStatus: 'Verified' };
 
-  router.get('/notifications', isLoggedIn, async (req, res) => {
-    try {
-      const notifications = await Notification.find({ userId: req.user._id }).lean();
-  
-      const chatNotifications = notifications.filter(notification => notification.type === 'chat');
-      const otherNotifications = notifications.filter(notification => notification.type !== 'chat');
-  
-      const chatDetailsPromises = chatNotifications.map(async (notification) => {
-        try {
-          if (!notification.chatId) {
-            console.warn(`No chatId for notification ${notification._id}`);
-            return {
-              ...notification,
-              senderName: 'Unknown',
-              senderProfilePic: null,
-              message: 'No message available',
-              timeAgo: timeSince(notification.createdAt) 
+        if (req.query.search) {
+            const regex = new RegExp(escapeRegex(req.query.search), 'gi');
+
+            filter = {
+                verificationStatus: 'Verified',
+                $or: [
+                    { title: regex },
+                    { categories: regex },
+                    { hashtags: regex }
+                ]
             };
-          }
-  
-          const chat = await Chat.findById(notification.chatId)
-                                .populate('doctorId patientId')
-                                .lean();
-  
-          if (!chat) {
-            console.warn(`Chat not found for notification ${notification._id}`);
-            return {
-              ...notification,
-              senderName: 'Unknown',
-              senderProfilePic: null,
-              message: 'No message available',
-              timeAgo: timeSince(notification.createdAt) 
-            };
-          }
-  
-          const sender = chat.doctorId._id.toString() === req.user._id.toString() ? chat.patientId : chat.doctorId;
-  
-          return {
-            ...notification,
-            senderName: sender.name || 'Unknown',
-            senderProfilePic: sender.profilePicture ? `data:${sender.profilePicture.contentType};base64,${sender.profilePicture.data.toString('base64')}` : null,
-            message: notification.message,
-            timeAgo: timeSince(notification.createdAt) 
-          };
-        } catch (err) {
-          console.error(`Error fetching chat details for notification ${notification._id}:`, err);
-          return {
-            ...notification,
-            senderName: 'Error',
-            senderProfilePic: null,
-            message: 'Error fetching message',
-            timeAgo: timeSince(notification.createdAt) 
-          };
         }
-      });
-  
-      const chatNotificationsWithDetails = await Promise.all(chatDetailsPromises);
-  
-      const allNotifications = [...chatNotificationsWithDetails, ...otherNotifications].map(notification => ({
-        ...notification,
-        timeAgo: timeSince(notification.createdAt)
-      }));
-  
-      // Send JSON response instead of rendering an HTML page
-      
-      res.json({ notifications: allNotifications });
-    } catch (error) {
-      console.error('Error fetching notifications:', error);
-      res.status(500).json({ error: 'Server Error' });
+
+        const verifiedBlogs = await Blog.find(filter).lean();
+
+        res.render('Doctorblogs', { blogs: verifiedBlogs, searchQuery: req.query.search });
+
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).send('Server Error');
     }
-  });
-  
-  
-  function timeSince(date) {
+});
+
+router.get('/notifications', isLoggedIn, async (req, res) => {
+    try {
+        const notifications = await Notification.find({ userId: req.user._id }).lean();
+
+        const chatNotifications = notifications.filter(notification => notification.type === 'chat');
+        const otherNotifications = notifications.filter(notification => notification.type !== 'chat');
+
+        const chatDetailsPromises = chatNotifications.map(async (notification) => {
+            try {
+                if (!notification.chatId) {
+                    console.warn(`No chatId for notification ${notification._id}`);
+                    return {
+                        ...notification,
+                        senderName: 'Unknown',
+                        senderProfilePic: null,
+                        message: 'No message available',
+                        timeAgo: timeSince(notification.createdAt)
+                    };
+                }
+
+                const chat = await Chat.findById(notification.chatId)
+                    .populate('doctorId patientId')
+                    .lean();
+
+                if (!chat) {
+                    console.warn(`Chat not found for notification ${notification._id}`);
+                    return {
+                        ...notification,
+                        senderName: 'Unknown',
+                        senderProfilePic: null,
+                        message: 'No message available',
+                        timeAgo: timeSince(notification.createdAt)
+                    };
+                }
+
+                const sender = chat.doctorId._id.toString() === req.user._id.toString() ? chat.patientId : chat.doctorId;
+
+                return {
+                    ...notification,
+                    senderName: sender.name || 'Unknown',
+                    senderProfilePic: sender.profilePicture ? `data:${sender.profilePicture.contentType};base64,${sender.profilePicture.data.toString('base64')}` : null,
+                    message: notification.message,
+                    timeAgo: timeSince(notification.createdAt)
+                };
+            } catch (err) {
+                console.error(`Error fetching chat details for notification ${notification._id}:`, err);
+                return {
+                    ...notification,
+                    senderName: 'Error',
+                    senderProfilePic: null,
+                    message: 'Error fetching message',
+                    timeAgo: timeSince(notification.createdAt)
+                };
+            }
+        });
+
+        const chatNotificationsWithDetails = await Promise.all(chatDetailsPromises);
+
+        const allNotifications = [...chatNotificationsWithDetails, ...otherNotifications].map(notification => ({
+            ...notification,
+            timeAgo: timeSince(notification.createdAt)
+        }));
+
+        // Send JSON response instead of rendering an HTML page
+
+        res.json({ notifications: allNotifications });
+    } catch (error) {
+        console.error('Error fetching notifications:', error);
+        res.status(500).json({ error: 'Server Error' });
+    }
+});
+
+
+function timeSince(date) {
     const seconds = Math.floor((new Date() - new Date(date)) / 1000);
     let interval = Math.floor(seconds / 31536000);
-  
+
     if (interval > 1) {
-      return interval + " years ago";
+        return interval + " years ago";
     }
     interval = Math.floor(seconds / 2592000);
     if (interval > 1) {
-      return interval + " months ago";
+        return interval + " months ago";
     }
     interval = Math.floor(seconds / 86400);
     if (interval > 1) {
-      return interval + " days ago";
+        return interval + " days ago";
     }
     interval = Math.floor(seconds / 3600);
     if (interval > 1) {
-      return interval + " hours ago";
+        return interval + " hours ago";
     }
     interval = Math.floor(seconds / 60);
     if (interval > 1) {
-      return interval + " minutes ago";
+        return interval + " minutes ago";
     }
     return Math.floor(seconds) + " seconds ago";
-  }
-  
-  router.post('/notifications/:id/mark-read', isLoggedIn, async (req, res) => {
-    try {
-      await Notification.findByIdAndUpdate(req.params.id, { read: true });
-      res.json({ message: 'Notification marked as read' });
-    } catch (error) {
-      console.error(error);
-      res.status(500).json({ error: 'Server Error' });
-    }
-  });
-  
-    
-    
-  router.post('/notifications/:id/delete', isLoggedIn, async (req, res) => {
-    try {
-      await Notification.findByIdAndDelete(req.params.id);
-      res.json({ message: 'Notification deleted' });
-    } catch (error) {
-      console.error(error);
-      res.status(500).json({ error: 'Server Error' });
-    }
-  });
+}
 
-  router.get('/insights', isLoggedIn, async (req, res) => {
+router.post('/notifications/:id/mark-read', isLoggedIn, async (req, res) => {
+    try {
+        await Notification.findByIdAndUpdate(req.params.id, { read: true });
+        res.json({ message: 'Notification marked as read' });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Server Error' });
+    }
+});
+
+
+
+router.post('/notifications/:id/delete', isLoggedIn, async (req, res) => {
+    try {
+        await Notification.findByIdAndDelete(req.params.id);
+        res.json({ message: 'Notification deleted' });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Server Error' });
+    }
+});
+
+router.get('/insights', isLoggedIn, async (req, res) => {
     try {
         const doctorEmail = req.session.user.email;
         const doctor = await Doctor.findOne({ email: doctorEmail });
@@ -1762,9 +1763,9 @@ router.get('/blogs', async (req, res) => {
         }
 
         const totalPatients = await Booking.aggregate([
-            { $match: { doctor: doctor._id, status: 'completed' } }, 
+            { $match: { doctor: doctor._id, status: 'completed' } },
             { $group: { _id: "$patient" } },
-            { $count: "uniquePatients" } 
+            { $count: "uniquePatients" }
         ]);
 
         const totalConsultations = await Booking.countDocuments({ doctor: doctor._id, status: 'completed' });
@@ -1781,17 +1782,17 @@ router.get('/blogs', async (req, res) => {
 
         if (bookingFilter === 'today') {
             startDate = new Date();
-            startDate.setHours(0, 0, 0, 0); 
+            startDate.setHours(0, 0, 0, 0);
             endDate = new Date();
-            endDate.setHours(23, 59, 59, 999); 
+            endDate.setHours(23, 59, 59, 999);
         } else if (bookingFilter === 'week') {
             startDate = new Date();
             startDate.setDate(startDate.getDate() - startDate.getDay());
             endDate = new Date();
-            endDate.setDate(endDate.getDate() + (6 - endDate.getDay())); 
+            endDate.setDate(endDate.getDate() + (6 - endDate.getDay()));
         } else if (bookingFilter === 'month') {
             startDate = new Date();
-            startDate.setDate(1); 
+            startDate.setDate(1);
             endDate = new Date(startDate);
             endDate.setMonth(endDate.getMonth() + 1);
             endDate.setDate(0);
@@ -1827,7 +1828,7 @@ router.get('/blogs', async (req, res) => {
 
         res.json({
             doctor,
-            totalPatients: totalPatients[0]?.uniquePatients || 0, 
+            totalPatients: totalPatients[0]?.uniquePatients || 0,
             totalConsultations,
             totalReviews,
             averageRating,
@@ -1845,5 +1846,62 @@ router.get('/blogs', async (req, res) => {
         res.status(500).json({ message: 'Server Error' });
     }
 });
-  
-  module.exports = router;
+
+router.get('/accept-invite/:corporateId/:doctorId?/:requestId?', async (req, res) => {
+    if (!req.session.user) {
+        req.flash('error_msg', 'You must be logged in to accept the invite');
+        return res.redirect('/auth/login');
+    }
+
+    const { corporateId, requestId } = req.params;
+    const doctorId = req.session.user._id;
+
+    try {
+        const doctor = await Doctor.findById(doctorId);
+        if (!doctor) {
+            req.flash('error_msg', 'Doctor not found');
+            return res.redirect('/doctor/login');
+        }
+
+        let request;
+        if (requestId) {
+            request = doctor.corporateRequests.id(requestId);
+            if (!request || request.corporateId.toString() !== corporateId.toString()) {
+                req.flash('error_msg', 'Request not found or invalid');
+                return res.redirect('/doctor/dashboard');
+            }
+        } else {
+            request = {
+                corporateId,
+                corporateName: 'Corporate Name',
+                requestStatus: 'accepted',
+            };
+            doctor.corporateRequests.push(request);
+        }
+
+        if (!requestId) {
+            request.requestStatus = 'accepted';
+        }
+        await doctor.save();
+
+        const corporate = await Corporate.findById(corporateId);
+        if (!corporate) {
+            req.flash('error_msg', 'Corporate not found');
+            return res.redirect('/doctor/dashboard');
+        }
+
+        if (!corporate.doctors.includes(doctor._id)) {
+            corporate.doctors.push(doctor._id);
+            await corporate.save();
+        }
+
+        req.flash('success_msg', 'Invitation accepted and doctor added to corporate');
+        res.redirect(`${process.env.REACT_APP_BASE_URL}/doctor/corporate/${corporateId}`);
+    } catch (err) {
+        console.error('Error accepting invite:', err);
+        req.flash('error_msg', 'Error accepting invitation');
+        res.redirect('/doctor/dashboard');
+    }
+});
+
+module.exports = router;
