@@ -1850,7 +1850,7 @@ router.get('/insights', isLoggedIn, async (req, res) => {
 router.get('/accept-invite/:corporateId/:doctorId?/:requestId?', async (req, res) => {
     if (!req.session.user) {
         req.flash('error_msg', 'You must be logged in to accept the invite');
-        return res.redirect('/auth/login');
+        return res.redirect(`${process.env.REACT_APP_BASE_URL}/login`);
     }
 
     const { corporateId, requestId } = req.params;
@@ -1860,7 +1860,7 @@ router.get('/accept-invite/:corporateId/:doctorId?/:requestId?', async (req, res
         const doctor = await Doctor.findById(doctorId);
         if (!doctor) {
             req.flash('error_msg', 'Doctor not found');
-            return res.redirect('/doctor/login');
+            return res.redirect(`${process.env.REACT_APP_BASE_URL}/login`);
         }
 
         let request;
@@ -1868,7 +1868,7 @@ router.get('/accept-invite/:corporateId/:doctorId?/:requestId?', async (req, res
             request = doctor.corporateRequests.id(requestId);
             if (!request || request.corporateId.toString() !== corporateId.toString()) {
                 req.flash('error_msg', 'Request not found or invalid');
-                return res.redirect('/doctor/dashboard');
+                return res.redirect(`${process.env.REACT_APP_BASE_URL}/login`);
             }
         } else {
             request = {
@@ -1887,7 +1887,7 @@ router.get('/accept-invite/:corporateId/:doctorId?/:requestId?', async (req, res
         const corporate = await Corporate.findById(corporateId);
         if (!corporate) {
             req.flash('error_msg', 'Corporate not found');
-            return res.redirect('/doctor/dashboard');
+            return res.redirect(`${process.env.REACT_APP_BASE_URL}/login`);
         }
 
         if (!corporate.doctors.includes(doctor._id)) {
@@ -1896,11 +1896,11 @@ router.get('/accept-invite/:corporateId/:doctorId?/:requestId?', async (req, res
         }
 
         req.flash('success_msg', 'Invitation accepted and doctor added to corporate');
-        res.redirect(`${process.env.REACT_APP_BASE_URL}/doctor/corporate/${corporateId}`);
+        res.redirect(`${process.env.REACT_APP_BASE_URL}/edit/profile/doctor`);
     } catch (err) {
         console.error('Error accepting invite:', err);
         req.flash('error_msg', 'Error accepting invitation');
-        res.redirect('/doctor/dashboard');
+        res.redirect(`${process.env.REACT_APP_BASE_URL}/login`);
     }
 });
 

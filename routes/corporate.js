@@ -284,7 +284,6 @@ router.get('/profile', async (req, res) => {
       });
       const inviteLinks = corporate.doctors.map(doctor => {
         return {
-          doctorId: doctor._id,
           inviteLink: `${process.env.NODE_URL}/doctor/accept-invite/${corporateId}/${doctor._id}`
         };
       });
@@ -701,20 +700,43 @@ const sendInvitationEmail = (email, inviteLink, hospitalName) => {
   });
 
   const mailOptions = {
-      from: process.env.EMAIL_USER,
-      to: email,
-      subject: `Invitation to Join ${hospitalName} Hospital Network`, 
-      html: `
-          <p>Hello,</p>
-          <p>We would like to invite you to join the ${hospitalName} hospital network. Please follow the steps below:</p>
-          <ul>
-              <li>If you are not a member yet, <a href="https://beta.medxbay.com/signup">register here</a> and fill out your details.</li>
-              <li>If you are already a member, <a href="https://beta.medxbay.com/login">log in here</a>.</li>
-              <li>After logging in, click the following invite link to join the hospital: <a href="${inviteLink}">${inviteLink}</a></li>
-          </ul>
-          <p>Best regards,</p>
-          <p>Your ${hospitalName} Team</p>
-      `,
+    from: process.env.EMAIL_USER,
+    to: email,
+    subject: `🏥 Invitation to Join ${hospitalName} Hospital Network`, 
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 10px;">
+        <h2 style="text-align: center;">
+          <span style="color: #FF7F50;">Join ${hospitalName} Network!</span>
+        </h2>
+
+        <p style="font-size: 16px;">Hello,</p>
+
+        <p style="font-size: 16px;">We are thrilled to invite you to join the ${hospitalName} hospital network. Follow these simple steps to get started:</p>
+
+        <h3 style="color: #272848;">Steps to Join:</h3>
+        <ol style="font-size: 16px;">
+          <li>If you are not a member yet, <a href=${process.env.REACT_APP_BASE_URL}/signup style="color: #FF7F50; text-decoration: none;">register here</a> and complete your profile.</li>
+          <li>If you are already a member, <a href=${process.env.REACT_APP_BASE_URL}/login style="color: #FF7F50; text-decoration: none;">log in here</a>.</li>
+          <li>Once logged in, click the invitation link below to join:</li>
+        </ol>
+
+        <div style="text-align: center; margin: 20px 0;">
+          <a href="${inviteLink}" style="padding: 14px 24px; color: white; background-color: #FF7F50; text-decoration: none; border-radius: 5px; font-size: 16px;">Join ${hospitalName} Now</a>
+        </div>
+
+        <p style="font-size: 16px;">Or, copy and paste this link into your browser:</p>
+        <p style="word-break: break-all; font-size: 16px;"><a href="${inviteLink}" style="color: #272848;">${inviteLink}</a></p>
+
+        <p style="font-size: 16px;">We look forward to welcoming you to our network. If you have any questions, feel free to reach out—we're here to assist you!</p>
+
+        <p style="font-size: 16px;">Best regards,</p>
+        <p style="font-size: 16px;"><strong>The ${hospitalName} Team</strong></p>
+
+        <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
+
+        <p style="font-size: 14px; color: #777;">P.S. If you did not expect this invitation, please disregard this email.</p>
+      </div>
+    `,
   };
 
   return new Promise((resolve, reject) => {
