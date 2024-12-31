@@ -715,7 +715,7 @@ const sendInvitationEmail = (email, inviteLink, hospitalName) => {
 
         <h3 style="color: #272848;">Steps to Join:</h3>
         <ol style="font-size: 16px;">
-          <li>If you are not a member yet, <a href=${process.env.REACT_APP_BASE_URL}/signup style="color: #FF7F50; text-decoration: none;">register here</a> and complete your profile.</li>
+          <li>If you are not a member yet, <a href=${process.env.REACT_APP_BASE_URL}/provider/signup style="color: #FF7F50; text-decoration: none;">register here</a> and complete your profile.</li>
           <li>If you are already a member, <a href=${process.env.REACT_APP_BASE_URL}/login style="color: #FF7F50; text-decoration: none;">log in here</a>.</li>
           <li>Once logged in, click the invitation link below to join:</li>
         </ol>
