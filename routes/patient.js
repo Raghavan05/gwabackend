@@ -3,6 +3,7 @@ const router = express.Router();
 const multer = require('multer');
 const Patient = require('../models/Patient');
 const Doctor = require('../models/Doctor');
+const Corporate = require('../models/Corporate');
 const Booking = require('../models/Booking');
 const Admin = require('../models/Admin'); 
 const PDFDocument = require('pdfkit');
@@ -1934,6 +1935,143 @@ router.get('/news-releases', async (req, res) => {
     res.status(500).json({ message: 'Server Error' });
   }
 });
+router.get('/corporate-list', async (req, res) => {
+  try {
+    const corporates = await Corporate.find().select('corporateName tagline address profilePicture');
+
+    res.json({ corporates });
+  } catch (err) {
+    console.error('Error fetching corporate list:', err);
+    req.flash('error_msg', 'Error retrieving corporate list');
+    res.redirect('/patient/patient-index');
+  }
+});
+
+router.get('/corporate/:corporateId', async (req, res) => {
+  const { corporateId } = req.params;
+  const patientId = req.session.user._id; 
+
+  try {
+    const corporates = await Corporate.findById(corporateId).populate('doctors'); 
+    if (!corporates) {
+      req.flash('error_msg', 'Corporate not found');
+      return res.redirect('/patient/corporate-list');
+    }
+
+    const patient = await Patient.findById(patientId);
+    const isFollowing = patient.followedCorporates.includes(corporateId);
+
+    const verifiedBlogs = await Blog.find({
+      authorId: { $in: corporates.doctors.map(doctor => doctor._id) },
+      verificationStatus: 'Verified'
+    })
+      .select('title description image conditions authorId')
+      .populate({
+        path: 'authorId',
+        model: 'Doctor',
+        select: 'name profilePicture',
+      });
+
+    const corporatesWithReviews = await Corporate.findById(corporateId)
+      .populate({
+        path: 'patientReviews.patientId',
+        model: 'Patient',
+        select: 'name profilePicture',
+      })
+      .populate({
+        path: 'doctorReviews.doctorId',
+        model: 'Doctor',
+        select: 'name profilePicture',
+      });
+
+    corporatesWithReviews.patientReviews = corporatesWithReviews.patientReviews.filter(review => review.showOnPage);
+    corporatesWithReviews.doctorReviews = corporatesWithReviews.doctorReviews.filter(review => review.showOnPage);
+
+    res.render('corporate-details', {
+      corporates: corporatesWithReviews,
+      doctors: corporates.doctors,
+      isFollowing,
+      followerCount: corporates.followers.length,
+      blogs: verifiedBlogs,
+    });
+  } catch (err) {
+    console.error('Error fetching corporate details:', err);
+    req.flash('error_msg', 'Error fetching corporate details');
+    res.redirect('/patient/corporate-list');
+  }
+});
+
+
+router.post('/corporate/:corporateId/follow', async (req, res) => {
+  const { corporateId } = req.params;
+  const patientId = req.session.user._id;
+
+  try {
+    const corporates = await Corporate.findById(corporateId);
+    const patient = await Patient.findById(patientId);
+
+    if (!corporates || !patient) {
+      req.flash('error_msg', 'Corporate or patient not found');
+      return res.redirect(`/corporate/${corporateId}`);
+    }
+
+    const alreadyFollowing = corporates.followers.some(
+      follower => follower._id.toString() === patientId.toString() && follower.modelType === 'Patient'
+    );
+
+    if (alreadyFollowing) {
+      corporates.followers = corporates.followers.filter(
+        follower => !(follower._id.toString() === patientId.toString() && follower.modelType === 'Patient')
+      );
+      req.flash('success_msg', 'You have unfollowed the corporate');
+    } else {
+      corporates.followers.push({ _id: patientId, modelType: 'Patient' });
+      req.flash('success_msg', 'You have followed the corporate');
+    }
+
+    await corporates.save();
+    res.redirect(`/patient/corporate/${corporateId}`);
+  } catch (err) {
+    console.error('Error updating follow status:', err);
+    req.flash('error_msg', 'Error updating follow status');
+    res.redirect(`/patient/corporate/${corporateId}`);
+  }
+});
+
+router.post('/corporate/:corporateId/review', async (req, res) => {
+  const { corporateId } = req.params;
+  const { reviewText, rating } = req.body; 
+  const patientId = req.session.user._id;
+
+  try {
+    if (rating < 1 || rating > 5) {
+      req.flash('error_msg', 'Rating must be between 1 and 5');
+      return res.redirect(`/patient/corporate/${corporateId}`);
+    }
+
+    const corporate = await Corporate.findById(corporateId);
+    if (!corporate) {
+      req.flash('error_msg', 'Corporate not found');
+      return res.redirect('/patient/corporate-list');
+    }
+
+    corporate.patientReviews.push({
+      patientId,
+      reviewText,
+      rating,
+    });
+
+    await corporate.save();
+
+    req.flash('success_msg', 'Review added successfully');
+    res.redirect(`/patient/corporate/${corporateId}`);
+  } catch (err) {
+    console.error('Error adding review:', err);
+    req.flash('error_msg', 'Error adding review');
+    res.redirect(`/patient/corporate/${corporateId}`);
+  }
+});
+
 
 
 
