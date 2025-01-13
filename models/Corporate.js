@@ -2,21 +2,19 @@ const mongoose = require('mongoose');
 
 const corporateSchema = new mongoose.Schema({
   corporateName: {
-    type: String,
     required: true,
+    type: String,
   },
   email: {
-    type: String,
     required: true,
-    unique: true,
+    type: String,
   },
   role: {
-    type: String,
     required: true,
+    type: String,
   },
   mobileNumber: {
     type: String,
-    required: true,
   },
   alternateContactNumber: { type: String },
   businessRegistrationNumber: { type: String },
@@ -41,8 +39,8 @@ const corporateSchema = new mongoose.Schema({
   tagline: { type: String },
   overview: { type: String },
   password: {
-    type: String,
     required: true,
+    type: String,
   },
   doctorReviews: [
     {
@@ -52,11 +50,9 @@ const corporateSchema = new mongoose.Schema({
       },
       reviewText: {
         type: String,
-        required: true,
       },
       rating: {
         type: Number,
-        required: true,
         min: 1,
         max: 5,
       },
@@ -75,11 +71,9 @@ const corporateSchema = new mongoose.Schema({
       },
       reviewText: {
         type: String,
-        required: true,
       },
       rating: {
         type: Number,
-        required: true,
         min: 1,
         max: 5,
       },
@@ -112,13 +106,26 @@ const corporateSchema = new mongoose.Schema({
   doctors: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Doctor' }],
   corporateSpecialties: [
     {
+      name: { type: String },
       image: {
         data: Buffer,
         contentType: String,
       },
-      name: { type: String, required: true }
     },
   ],
+  createdByAdmin: { type: Boolean, default: false },
+  profileVerification: [{
+    email: { type: String },
+    document: {
+      data: Buffer,
+      contentType: String
+    }
+  }],   
+  profileTransferRequest: {
+    type: String,
+    enum: ['Accepted', 'Pending', 'Rejected', 'Idle'], 
+    default: 'Idle'
+  }
 });
 
 module.exports = mongoose.model('Corporate', corporateSchema);

@@ -21,7 +21,8 @@ const nodemailer = require('nodemailer');
 const https = require('https');
 const Condition = require('../models/Condition');
 const NewsRelease = require('../models/NewsRelease');  
-const NewsLogo = require('../models/NewsLogo');const fetchConversionRates = () => {
+const NewsLogo = require('../models/NewsLogo');const Supplier = require('../models/Supplier');
+const fetchConversionRates = () => {
   return new Promise((resolve, reject) => {
       const options = {
           method: 'GET',
@@ -1937,13 +1938,22 @@ router.get('/news-releases', async (req, res) => {
 });
 router.get('/corporate-list', async (req, res) => {
   try {
-    const corporates = await Corporate.find().select('corporateName tagline address profilePicture');
+    const corporates = await Corporate.find()
 
     res.json({ corporates });
   } catch (err) {
     console.error('Error fetching corporate list:', err);
     req.flash('error_msg', 'Error retrieving corporate list');
     res.redirect('/patient/patient-index');
+  }
+});
+
+router.get('/all-suppliers', async (req, res) => {
+  try {
+      const suppliers = await Supplier.find();
+      res.json({ suppliers });
+  } catch (err) {
+      console.error('Error fetching suppliers:', err);
   }
 });
 
@@ -1987,7 +1997,7 @@ router.get('/corporate/:corporateId', async (req, res) => {
     corporatesWithReviews.patientReviews = corporatesWithReviews.patientReviews.filter(review => review.showOnPage);
     corporatesWithReviews.doctorReviews = corporatesWithReviews.doctorReviews.filter(review => review.showOnPage);
 
-    res.render('corporate-details', {
+    res.json({
       corporates: corporatesWithReviews,
       doctors: corporates.doctors,
       isFollowing,
@@ -2000,7 +2010,6 @@ router.get('/corporate/:corporateId', async (req, res) => {
     res.redirect('/patient/corporate-list');
   }
 });
-
 
 router.post('/corporate/:corporateId/follow', async (req, res) => {
   const { corporateId } = req.params;

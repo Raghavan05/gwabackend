@@ -775,6 +775,112 @@ router.post('/send-invite', async (req, res) => {
   }
 });
 
+router.get('/corporate-list', async (req, res) => {
+  const { 
+    state, 
+    country, 
+    city, 
+    treatmentApproach, 
+    corporateName, 
+    doctorLanguage, 
+    speciality, 
+    condition 
+  } = req.query; 
+
+  const filter = { verificationStatus: 'Verified' }; 
+
+  if (state) filter['address.state'] = state;
+  if (country) filter['address.country'] = country;
+  if (city) filter['address.city'] = city;
+  if (corporateName) filter['corporateName'] = { $regex: corporateName, $options: 'i' };
+
+  try {
+    const corporates = await Corporate.find(filter)
+      .select('corporateName tagline address profilePicture')
+      .populate({
+        path: 'doctors',
+        match: {
+          ...(treatmentApproach && { treatmentApproach: { $in: [treatmentApproach] } }),
+          ...(doctorLanguage && { languages: { $in: [doctorLanguage] } }),
+          ...(speciality && { speciality: { $in: [speciality] } }), 
+          ...(condition && { conditions: { $in: [condition] } }),  
+        },
+        select: 'speciality conditions treatmentApproach languages',
+      })
+      .lean();
+
+    const filteredCorporates = corporates.filter(corporate => corporate.doctors && corporate.doctors.length > 0);
+
+    const states = await Corporate.distinct('address.state', { verificationStatus: 'Verified' });
+    const countries = await Corporate.distinct('address.country', { verificationStatus: 'Verified' });
+    const cities = await Corporate.distinct('address.city', { verificationStatus: 'Verified' });
+    const treatmentApproaches = await Doctor.distinct('treatmentApproach');
+    const languagesSpoken = await Doctor.distinct('languages');
+    const specialities = await Doctor.distinct('speciality'); 
+    const conditions = await Doctor.distinct('conditions');
+
+    res.json({
+      corporates: filteredCorporates,
+      states,
+      countries,
+      cities,
+      treatmentApproaches,
+      languagesSpoken,
+      specialities, 
+      conditions, 
+      selectedFilters: { 
+        state, 
+        country, 
+        city, 
+        treatmentApproach, 
+        corporateName, 
+        doctorLanguage, 
+        speciality, 
+        condition 
+      },
+    });
+  } catch (err) {
+    console.error('Error fetching corporate list:', err);
+    req.flash('error_msg', 'Error retrieving corporate list');
+    res.redirect('/patient/patient-index');
+  }
+});
+
+
+router.post('/claim-profile', upload.single('document'), async (req, res) => {
+  const { corporateId, email } = req.body;
+  const document = req.file;
+
+  try {
+    const corporate = await Corporate.findById(corporateId);
+    if (!corporate) {
+      return res.status(404).send('Corporate profile not found.');
+    }
+
+    if (!document || !email) {
+      return res.status(400).send('Email and document are required.');
+    }
+
+    corporate.profileTransferRequest = 'Pending';
+
+    corporate.profileVerification.push({
+      email,
+      document: {
+        data: document.buffer,
+        contentType: document.mimetype,
+      },
+    });
+
+    await corporate.save();
+
+    res.redirect('/corporate/corporate-list'); 
+  } catch (err) {
+    console.error('Error submitting claim:', err);
+    res.status(500).send('Internal server error.');
+  }
+});
+
+
 router.get('/logout', (req, res) => {
   req.session.destroy(err => {
     if (err) {

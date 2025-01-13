@@ -1,7 +1,7 @@
 const express = require('express');
 const bcrypt = require('bcrypt');
 const router = express.Router();
-const Supplier = require('../models/Supplier'); 
+const Supplier = require('../models/Supplier');
 const Product = require('../models/Product'); 
 const Doctor = require('../models/Doctor');
 const nodemailer = require('nodemailer');
@@ -514,15 +514,67 @@ router.get('/manage-orders', isLoggedIn, (req, res) => {
 });
 
 router.get('/all-suppliers', async (req, res) => {
+    const { country, state, city, search } = req.query;
+
+    const filter = {};
+    if (country) filter['address.country'] = country;
+    if (state) filter['address.state'] = state;
+    if (city) filter['address.city'] = city;
+    if (search) filter.name = { $regex: search, $options: 'i' };
+
     try {
-        const suppliers = await Supplier.find();
-        res.render('allSuppliers', { suppliers });
+        const suppliers = await Supplier.find(filter)
+            .select('name tagline address profilePicture createdByAdmin profileTransferRequest')
+            .lean();
+
+        const countries = await Supplier.distinct('address.country');
+        const states = await Supplier.distinct('address.state', country ? { 'address.country': country } : {});
+        const cities = await Supplier.distinct('address.city', state ? { 'address.state': state } : {});
+
+        res.json({
+            suppliers,
+            countries,
+            states,
+            cities,
+            selectedFilters: { country, state, city, search },
+        });
     } catch (err) {
         console.error('Error fetching suppliers:', err);
-        res.redirect('https://medxbay.com');
+        res.status(500).json({ error: 'Error fetching supplier list' });
     }
 });
+router.post('/claim-profile', upload.single('document'), async (req, res) => {
+    const { supplierId, email } = req.body;
+    const document = req.file;
 
+    try {
+        const supplier = await Supplier.findById(supplierId);
+        if (!supplier) {
+            return res.status(404).send('Supplier profile not found.');
+        }
+
+        if (!document || !email) {
+            return res.status(400).send('Email and document are required.');
+        }
+
+        supplier.profileTransferRequest = 'Pending';
+
+        supplier.profileVerification.push({
+            email,
+            document: {
+                data: document.buffer,
+                contentType: document.mimetype,
+            },
+        });
+
+        await supplier.save();
+
+        res.redirect('/supplier/all-suppliers'); 
+    } catch (err) {
+        console.error('Error submitting claim:', err);
+        res.status(500).send('Internal server error.');
+    }
+});
 
 router.get('/supplier/:id', async (req, res) => {
     try {

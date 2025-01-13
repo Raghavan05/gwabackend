@@ -12,6 +12,9 @@ const storage = multer.memoryStorage();
 const upload = multer({ storage: storage });
 const Condition = require('../models/Condition');
 const nodemailer = require('nodemailer');
+const bcrypt = require('bcrypt');
+const Supplier = require('../models/Supplier');
+const Corporate = require('../models/Corporate');
 
 function isLoggedIn(req, res, next) {
   if (req.session.user && req.session.user.role === 'admin') {
@@ -268,7 +271,7 @@ router.get('/view-appointments',/* isLoggedIn,*/ async (req, res) => {
           .populate('doctor')
           .populate('patient')
           .exec();
-      res.json( { bookings, activePage: 'view-appointments' });
+      res.json({bookings});
   } catch (error) {
       console.error(error);
       res.status(500).send('Server error');
@@ -459,7 +462,6 @@ router.get('/blogs', /*isLoggedIn,*/ async (req, res) => {
   }
 });
 const mongoose = require('mongoose');
-const Supplier = require('../models/Supplier');
 
 router.get('/blogs/view/:id', /*isLoggedIn,*/ async (req, res) => {
   try {
@@ -1218,5 +1220,262 @@ router.post('/supplier-blog-upload', upload.fields([{ name: 'image', maxCount: 1
       res.status(500).json({ message: 'Server Error' });
   }
 });
+
+
+router.get('/create-account', isAdmin, (req, res) => {
+  res.json({
+    success_msg: req.flash('success_msg') || null,
+    error_msg: req.flash('error_msg') || null,
+    activePage: 'create-account',
+  });
+});
+
+router.post('/create-account', isAdmin, async (req, res) => {
+  const { name, email, password, role } = req.body;
+
+  try {
+    if (!name || !email || !password || !role) {
+      req.flash('error_msg', 'All fields are required.');
+      return res.redirect('/admin/create-account');
+    }
+
+    // Check if the email already exists
+    let existingUser;
+    switch (role.toLowerCase()) {
+      case 'doctor':
+        existingUser = await Doctor.findOne({ email });
+        break;
+      case 'corporate':
+        existingUser = await Corporate.findOne({ email });
+        break;
+      case 'supplier':
+        existingUser = await Supplier.findOne({ contactEmail : email });
+        break;
+      default:
+        return res.status(400).json({ message: 'Invalid role selected.' });
+    }
+
+    // If email exists, handle the error
+    if (existingUser) {
+      return res.status(400).json({ message: 'Email already exists.' });
+      // req.json({'error_msg', 'Email already exists.'});
+    }
+
+    // If email does not exist, proceed with account creation
+    const hashedPassword = await bcrypt.hash(password, 10);
+    let newUser;
+    switch (role.toLowerCase()) {
+      case 'doctor':
+        newUser = new Doctor({
+          name,
+          email,
+          password: hashedPassword,
+          role: 'doctor',
+          createdByAdmin: true,
+          verified: "Verified",
+          isVerified: true,
+        });
+        break;
+      case 'corporate':
+        newUser = new Corporate({
+          corporateName: name,
+          email,
+          password: hashedPassword,
+          role: 'corporate',
+          verificationStatus: "Verified",
+          isVerified: true,
+          createdByAdmin: true,
+        });
+        break;
+      case 'supplier':
+        newUser = new Supplier({
+          name,
+          contactEmail: email,
+          password: hashedPassword,
+          role: 'supplier',
+          createdByAdmin: true,
+        });
+        break;
+      default:
+        return res.status(400).json({ message: 'Invalid role selected.' });
+    }
+
+    // Save the user to the database
+    await newUser.save();
+
+    // Respond with success
+    res.status(201).json({ message: `Account created successfully.` });
+    // Or redirect if you prefer
+    // res.redirect('/admin/create-account');
+  } catch (err) {
+    console.error('Error creating account:', err);
+    req.flash('error_msg', 'An error occurred while creating the account.');
+    res.redirect('/admin/create-account');
+  }
+});
+
+
+router.get('/accounts', async (req, res) => {
+  try {
+    const doctors = await Doctor.find({ createdByAdmin: true }).select('_id name email role profileTransferRequest');
+    const corporates = await Corporate.find({ createdByAdmin: true }).select('_id corporateName email role profileTransferRequest');
+    const suppliers = await Supplier.find({ createdByAdmin: true }).select('_id name contactEmail role profileTransferRequest');
+
+    const accounts = [
+      ...doctors.map((d) => ({
+        _id: d._id, 
+        name: d.name,
+        email: d.email,
+        role: 'Doctor',
+        profileTransferRequest: d.profileTransferRequest || 'N/A',
+      })),
+      ...corporates.map((c) => ({
+        _id: c._id, 
+        name: c.corporateName,
+        email: c.email,
+        role: 'Corporate',
+        profileTransferRequest: c.profileTransferRequest || 'N/A',
+      })),
+      ...suppliers.map((s) => ({
+        _id: s._id, 
+        name: s.name,
+        email: s.contactEmail,
+        role: 'Supplier',
+        profileTransferRequest: s.profileTransferRequest || 'N/A',
+      })),
+    ];
+
+    console.log(accounts);
+
+    res.json({accounts, activePage: 'accounts' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).send('Server Error');
+  }
+});
+
+router.get('/account-view/:id', isAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    let profile = await Doctor.findById(id).lean();
+    let profileType = 'Doctor';
+
+    if (!profile) {
+      profile = await Corporate.findById(id).lean();
+      profileType = 'Corporate';
+    }
+
+    if (!profile) {
+      profile = await Supplier.findById(id).lean();
+      profileType = 'Supplier';
+    }
+
+    if (!profile) {
+      return res.status(404).send('Profile not found');
+    }
+
+    res.json({
+      profile,
+      profileType,
+    });
+  } catch (err) {
+    console.error('Error fetching profile:', err.message);
+    res.status(500).send('Server Error');
+  }
+});
+
+router.post('/update/:id', isAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { name, email, password, profileTransferRequest, profileType } = req.body;
+
+    let updatedProfile;
+
+    switch (profileType) {
+      case 'Doctor':
+        updatedProfile = await Doctor.findByIdAndUpdate(
+          id,
+          { name, email, profileTransferRequest },
+          { new: true }
+        );
+        break;
+      case 'Corporate':
+        updatedProfile = await Corporate.findByIdAndUpdate(
+          id,
+          { corporateName: name, email, profileTransferRequest },
+          { new: true }
+        );
+        break;
+      case 'Supplier':
+        updatedProfile = await Supplier.findByIdAndUpdate(
+          id,
+          { name, contactEmail: email, profileTransferRequest },
+          { new: true }
+        );
+        break;
+      default:
+        return res.status(400).send('Invalid profile type');
+    }
+
+    if (!updatedProfile) {
+      return res.status(404).json({ message: 'Profile not found.' });
+    }
+
+    if (password) {
+      const hashedPassword = await bcrypt.hash(password, 10);
+      updatedProfile.password = hashedPassword;
+      await updatedProfile.save();
+    }
+
+    res.status(200).json({
+      message: `${profileType} profile updated successfully.`
+    });
+  } catch (err) {
+    console.error('Error updating profile:', err.message);
+    res.status(500).send('Server Error');
+  }
+});
+
+router.get('/profile-transfer-requests', async (req, res) => {
+  try {
+    const doctors = await Doctor.find({ createdByAdmin: true }).select('_id name email profileTransferRequest profileVerification');
+    const corporates = await Corporate.find({ createdByAdmin: true }).select('_id corporateName email profileTransferRequest profileVerification');
+    const suppliers = await Supplier.find({ createdByAdmin: true }).select('_id name contactEmail profileTransferRequest profileVerification');
+
+    const requests = [
+      ...doctors.map((d) => ({
+        id: d._id,
+        name: d.name,
+        email: d.email,
+        role: 'Doctor',
+        profileTransferRequest: d.profileTransferRequest || 'N/A',
+        profileVerification: d.profileVerification || [],
+      })),
+      ...corporates.map((c) => ({
+        id: c._id,
+        name: c.corporateName,
+        email: c.email,
+        role: 'Corporate',
+        profileTransferRequest: c.profileTransferRequest || 'N/A',
+        profileVerification: c.profileVerification || [],
+      })),
+      ...suppliers.map((s) => ({
+        id: s._id,
+        name: s.name,
+        email: s.contactEmail,
+        role: 'Supplier',
+        profileTransferRequest: s.profileTransferRequest || 'N/A',
+        profileVerification: s.profileVerification || [],
+      })),
+    ];
+
+    res.json({ requests });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server Error' });
+  }
+});
+
 
 module.exports = router;

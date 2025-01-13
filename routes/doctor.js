@@ -1904,4 +1904,260 @@ router.get('/accept-invite/:corporateId/:doctorId?/:requestId?', async (req, res
     }
 });
 
+
+router.get('/view-corporate-request/:doctorId', async (req, res) => {
+    const doctorId = req.params.doctorId;
+  
+    try {
+      const doctor = await Doctor.findById(doctorId);
+      if (!doctor) {
+        req.flash('error_msg', 'Doctor not found');
+        return res.redirect('/doctors');
+      }
+  
+      const corporateRequests = doctor.corporateRequests;
+  
+      if (corporateRequests.length === 0) {
+        req.flash('error_msg', 'No corporate requests found');
+        return res.redirect('/doctors');
+      }
+  
+      const corporates = await Corporate.find({
+        _id: { $in: corporateRequests.map(request => request.corporateId) }
+      });
+  
+      const requestsWithCorporate = corporateRequests.map(request => {
+        const corporate = corporates.find(corp => corp._id.toString() === request.corporateId.toString());
+        return { ...request.toObject(), corporate }; 
+      });
+  
+      res.render('corporate-requests', {
+        doctor,
+        corporateRequests: requestsWithCorporate, 
+        pageTitle: 'View Corporate Requests'
+      });
+    } catch (err) {
+      console.error('Error viewing corporate request:', err);
+      req.flash('error_msg', 'Error fetching corporate requests');
+      res.redirect('/doctors');
+    }
+  });
+  
+  router.post('/update-corporate-request-status/:doctorId/:corporateId/:requestId', async (req, res) => {
+    const doctorId = req.params.doctorId;
+    const corporateId = req.params.corporateId;
+    const requestId = req.params.requestId;  
+    const { newStatus } = req.body; 
+  
+    try {
+      const doctor = await Doctor.findById(doctorId);
+      if (!doctor) {
+        req.flash('error_msg', 'Doctor not found');
+        return res.redirect(`/doctor/view-corporate-request/${doctorId}`);
+      }
+  
+      const request = doctor.corporateRequests.id(requestId);
+      if (!request || request.corporateId.toString() !== corporateId.toString()) {
+        req.flash('error_msg', 'Request not found');
+        return res.redirect(`/doctor/view-corporate-request/${doctorId}`);
+      }
+  
+      request.requestStatus = newStatus;
+  
+      if (newStatus === 'accepted') {
+        const corporate = await Corporate.findById(corporateId);
+        if (!corporate) {
+          req.flash('error_msg', 'Corporate not found');
+          return res.redirect(`/doctor/view-corporate-request/${doctorId}`);
+        }
+  
+        if (!corporate.doctors) {
+          corporate.doctors = [];  
+        }
+        
+        if (!corporate.doctors.includes(doctor._id)) {
+          corporate.doctors.push(doctor._id);
+        }
+  
+        await corporate.save();
+        req.flash('success_msg', 'Doctor added to corporate successfully');
+      }
+  
+      await doctor.save();
+  
+      req.flash('success_msg', 'Request status updated successfully');
+      res.redirect(`/doctor/view-corporate-request/${doctorId}`);
+    } catch (err) {
+      console.error('Error updating corporate request status:', err);
+      req.flash('error_msg', 'Error updating request status');
+      res.redirect('/doctors');
+    }
+  });
+
+  router.get('/corporate-list', async (req, res) => {
+    try {
+      const corporates = await Corporate.find().select('corporateName tagline address profilePicture');
+  
+      res.render('doctor-corporate-list', { corporates });
+  
+    } catch (err) {
+      console.error('Error fetching corporate list:', err);
+      req.flash('error_msg', 'Error retrieving corporate list');
+      res.redirect('/doctor/doctor-index');
+    }
+  });
+  
+
+  router.get('/corporate/:corporateId', async (req, res) => {
+    const { corporateId } = req.params;
+    const doctorId = req.session.user._id;
+  
+    try {
+      const corporate = await Corporate.findById(corporateId)
+        .populate('doctors') 
+        .populate({
+          path: 'doctorReviews',
+          populate: {
+            path: 'doctorId',
+            select: 'name profilePicture'
+          }
+        })
+        .populate({
+          path: 'patientReviews',
+          populate: {
+            path: 'patientId',
+            select: 'name profilePicture'
+          }
+        });
+  
+      if (!corporate) {
+        req.flash('error_msg', 'Corporate not found');
+        return res.redirect('/doctor/corporate-list');
+      }
+  
+      corporate.doctorReviews = corporate.doctorReviews.filter(review => review.showOnPage);
+      corporate.patientReviews = corporate.patientReviews.filter(review => review.showOnPage);
+  
+      const isFollowing = corporate.followers.some(
+        followerId => followerId.toString() === doctorId.toString()
+      );
+  
+      const doctors = corporate.doctors || [];
+      const followerCount = corporate.followers.length;
+  
+      res.render('doctor-corporate-details', {
+        corporate,
+        doctors,
+        followerCount,
+        isFollowing,
+        doctorReviews: corporate.doctorReviews,
+        patientReviews: corporate.patientReviews
+      });
+    } catch (err) {
+      console.error('Error fetching corporate details:', err);
+      req.flash('error_msg', 'Error fetching corporate details');
+      res.redirect('/doctor/corporate-list');
+    }
+  });  
+  
+router.post('/corporate/:corporateId/follow', async (req, res) => {
+    const { corporateId } = req.params;
+    const doctorId = req.session.user._id;
+
+    try {
+        const corporates = await Corporate.findById(corporateId);
+        const doctor = await Doctor.findById(doctorId);
+
+        if (!corporates || !doctor) {
+            req.flash('error_msg', 'Corporate or Doctor not found');
+            return res.redirect(`/doctor/corporate/${corporateId}`);
+        }
+
+        const alreadyFollowing = corporates.followers.some(
+            follower => follower.toString() === doctorId.toString()
+        );
+
+        if (alreadyFollowing) {
+            corporates.followers = corporates.followers.filter(
+                follower => follower.toString() !== doctorId.toString()
+            );
+            req.flash('success_msg', 'You have unfollowed the corporate');
+        } else {
+            corporates.followers.push(doctorId);
+            req.flash('success_msg', 'You have followed the corporate');
+        }
+
+        await corporates.save();
+        res.redirect(`/doctor/corporate/${corporateId}`);
+    } catch (err) {
+        console.error('Error updating follow status:', err);
+        req.flash('error_msg', 'Error updating follow status');
+        res.redirect(`/doctor/corporate/${corporateId}`);
+    }
+});
+
+router.post('/corporate/:corporateId/add-review', async (req, res) => {
+    const { corporateId } = req.params;
+    const { rating, reviewText } = req.body;
+    const doctorId = req.session.user._id;
+  
+    try {
+      const corporate = await Corporate.findById(corporateId);
+  
+      if (!corporate) {
+        return res.status(404).send('Corporate not found');
+      }
+  
+      const review = {
+        doctorId,
+        rating,
+        reviewText,
+        createdAt: new Date(),
+      };
+  
+      corporate.doctorReviews.push(review);
+      await corporate.save();
+  
+      res.redirect(`/doctor/corporate/${corporateId}`);
+    } catch (error) {
+      console.error(error);
+      res.status(500).send('Internal server error');
+    }
+  });
+
+  router.post('/claim-profile', upload.single('document'), async (req, res) => {
+    const { doctorId, email } = req.body;
+    const document = req.file; 
+
+    if (!doctorId || !email || !document) {
+        return res.status(400).send('Missing required fields');
+    }
+
+    try {
+        const doctor = await Doctor.findById(doctorId);
+        if (!doctor) {
+            return res.status(404).send('Doctor not found');
+        }
+
+        doctor.profileTransferRequest = 'Pending';
+
+        const profileVerification = {
+            email,
+            document: {
+                data: document.buffer,
+                contentType: document.mimetype,
+            },
+        };
+
+        doctor.profileVerification.push(profileVerification);
+
+        await doctor.save();
+
+        res.status(200).send('Profile claim request submitted successfully');
+    } catch (error) {
+        console.error('Error claiming profile:', error);
+        res.status(500).send('An error occurred while claiming the profile');
+    }
+});
+
 module.exports = router;
