@@ -543,6 +543,7 @@ router.get('/all-suppliers', async (req, res) => {
         res.status(500).json({ error: 'Error fetching supplier list' });
     }
 });
+
 router.post('/claim-profile', upload.single('document'), async (req, res) => {
     const { supplierId, email } = req.body;
     const document = req.file;
@@ -580,7 +581,19 @@ router.get('/supplier/:id', async (req, res) => {
     try {
         const supplier = await Supplier.findById(req.params.id);
         const products = await Product.find({ uploadedBy: req.params.id, countInStock: { $gt: 0 } });
-        res.render('supplierDetails', { supplier, products });
+        const blogs = await Blog.find({ authorId: req.params.id });
+
+        const blogsWithAuthors = await Promise.all(
+            blogs.map(async (blog) => {
+                const author = await Supplier.findById(blog.authorId);
+                return {
+                    ...blog.toObject(),
+                    authorName: author?.name || 'Unknown Author',
+                    authorProfilePicture: author?.profilePicture || null,
+                };
+            })
+        );
+        res.json({supplier, products,blogs :blogsWithAuthors });
     } catch (err) {
         console.error('Error fetching supplier details:', err);
         res.redirect('/supplier/all-suppliers');

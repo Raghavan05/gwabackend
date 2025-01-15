@@ -873,7 +873,7 @@ router.post('/claim-profile', upload.single('document'), async (req, res) => {
 
     await corporate.save();
 
-    res.redirect('/corporate/corporate-list'); 
+    return res.status(200).json({ message: 'Claim profile submitted successfully' });
   } catch (err) {
     console.error('Error submitting claim:', err);
     res.status(500).send('Internal server error.');

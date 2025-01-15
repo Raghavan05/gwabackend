@@ -29,7 +29,8 @@ const fetchConversionRates = () => {
           hostname: 'currency-conversion-and-exchange-rates.p.rapidapi.com',
           path: '/latest?from=USD&to=INR,GBP,AED',
           headers: {
-              'x-rapidapi-key': '96f2128666msh6c2a99315734957p152189jsn585b9f07df21', // Add your RapidAPI key here
+              // 'x-rapidapi-key': '96f2128666msh6c2a99315734957p152189jsn585b9f07df21', // Add your RapidAPI key here
+              'x-rapidapi-key': 'e7f861ce3emshc756a74c6f16a9ep17c98ejsn86255ac2f58a', // Add your RapidAPI key here
               'x-rapidapi-host': 'currency-conversion-and-exchange-rates.p.rapidapi.com'
           }
       };
@@ -1959,7 +1960,7 @@ router.get('/all-suppliers', async (req, res) => {
 
 router.get('/corporate/:corporateId', async (req, res) => {
   const { corporateId } = req.params;
-  const patientId = req.session.user._id; 
+  // const patientId = req.session.user?._id; 
 
   try {
     const corporates = await Corporate.findById(corporateId).populate('doctors'); 
@@ -1968,8 +1969,8 @@ router.get('/corporate/:corporateId', async (req, res) => {
       return res.redirect('/patient/corporate-list');
     }
 
-    const patient = await Patient.findById(patientId);
-    const isFollowing = patient.followedCorporates.includes(corporateId);
+    // const patient = await Patient.findById(patientId);
+    // const isFollowing = patient.followedCorporates.includes(corporateId);
 
     const verifiedBlogs = await Blog.find({
       authorId: { $in: corporates.doctors.map(doctor => doctor._id) },
@@ -1996,14 +1997,14 @@ router.get('/corporate/:corporateId', async (req, res) => {
 
     corporatesWithReviews.patientReviews = corporatesWithReviews.patientReviews.filter(review => review.showOnPage);
     corporatesWithReviews.doctorReviews = corporatesWithReviews.doctorReviews.filter(review => review.showOnPage);
-
-    res.json({
-      corporates: corporatesWithReviews,
+      const responseData = {
+      corporate: corporatesWithReviews,
       doctors: corporates.doctors,
-      isFollowing,
+      // isFollowing,
       followerCount: corporates.followers.length,
       blogs: verifiedBlogs,
-    });
+      }
+      res.status(200).json({ success: true, data: responseData });
   } catch (err) {
     console.error('Error fetching corporate details:', err);
     req.flash('error_msg', 'Error fetching corporate details');
