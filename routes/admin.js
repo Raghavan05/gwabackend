@@ -1450,7 +1450,11 @@ router.get('/profile-transfer-requests', async (req, res) => {
         email: d.email,
         role: 'Doctor',
         profileTransferRequest: d.profileTransferRequest || 'N/A',
-        profileVerification: d.profileVerification || [],
+        profileVerification: d.profileVerification.map((pv) => ({
+          email: pv.email,
+          document: pv.document,
+          createdAt: pv.createdAt
+        })) || [],
       })),
       ...corporates.map((c) => ({
         id: c._id,
@@ -1458,7 +1462,11 @@ router.get('/profile-transfer-requests', async (req, res) => {
         email: c.email,
         role: 'Corporate',
         profileTransferRequest: c.profileTransferRequest || 'N/A',
-        profileVerification: c.profileVerification || [],
+        profileVerification: c.profileVerification.map((pv) => ({
+          email: pv.email,
+          document: pv.document,
+          createdAt: pv.createdAt
+        })) || [],
       })),
       ...suppliers.map((s) => ({
         id: s._id,
@@ -1466,7 +1474,11 @@ router.get('/profile-transfer-requests', async (req, res) => {
         email: s.contactEmail,
         role: 'Supplier',
         profileTransferRequest: s.profileTransferRequest || 'N/A',
-        profileVerification: s.profileVerification || [],
+        profileVerification: s.profileVerification.map((pv) => ({
+          email: pv.email,
+          document: pv.document,
+          createdAt: pv.createdAt
+        })) || [],
       })),
     ];
 

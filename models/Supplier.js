@@ -55,7 +55,8 @@ const supplierSchema = new Schema({
         document: {
           data: Buffer,
           contentType: String
-        }
+        },
+        createdAt: { type: Date, default: Date.now } 
       }], 
     profileTransferRequest: {
         type: String,

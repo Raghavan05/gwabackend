@@ -306,7 +306,7 @@ router.post('/profile/update', isLoggedIn, async (req, res) => {
             { new: true, runValidators: true }
         );
 
-        res.json({ success: true, message: 'Profile updated successfully', doctor });
+        res.json({ success: true, message: 'Profile updated successfully' });
     } catch (err) {
         console.error('Error updating profile:', err.message);
         res.status(500).json({ success: false, message: 'Server Error' });

@@ -263,15 +263,14 @@ app.get('/auth/countries', async (req, res) => {
   try {
     const countries = await Doctor.aggregate([
       { $match: { role: 'doctor', verified: 'Verified', 'timeSlots.status': 'free' } },
-      { $unwind: '$timeSlots' }, // Unwind timeSlots to access individual records
-      { $group: { _id: '$timeSlots.hospitalLocation.country' } }, // Group by country to remove duplicates
-      { $sort: { _id: 1 } }, // Optional: Sort countries alphabetically
-      { $project: { _id: 0, country: '$_id' } } // Project the country field
+      { $unwind: '$timeSlots' },
+      { $group: { _id: '$timeSlots.hospitalLocation.country' } },
+      { $match: { _id: { $ne: null } } }, 
+      { $sort: { _id: 1 } },
+      { $project: { _id: 0, country: '$_id' } }
     ]);
 
-    // Convert the results to an array of country names
     const countryList = countries.map(country => country.country);
-    
     res.json(countryList);
   } catch (error) {
     res.status(500).json({ message: 'Error fetching countries', error });
@@ -284,11 +283,13 @@ app.get('/auth/states', async (req, res) => {
     const states = await Doctor.aggregate([
       { $match: { role: 'doctor', verified: 'Verified', 'timeSlots.status': 'free' } },
       { $unwind: '$timeSlots' },
-      { $match: {'timeSlots.status': 'free'} },
-      { $group: { _id:  '$timeSlots.hospitalLocation.state' } },
-      { $sort: { _id: 1}},
+      { $match: { 'timeSlots.status': 'free' } },
+      { $group: { _id: '$timeSlots.hospitalLocation.state' } },
+      { $match: { _id: { $ne: null } } }, 
+      { $sort: { _id: 1 } },
       { $project: { _id: 0, state: '$_id' } }
     ]);
+
     const stateList = states.map(state => state.state);
     res.json(stateList);
   } catch (error) {
@@ -297,40 +298,41 @@ app.get('/auth/states', async (req, res) => {
 });
 
 
+
 app.get('/auth/cities', async (req, res) => {
   try {
     const cities = await Doctor.aggregate([
       { $match: { role: 'doctor', verified: 'Verified', 'timeSlots.status': 'free' } },
-      { $unwind: '$timeSlots' }, // Unwind the timeSlots array to work with individual documents
-      { $match: { 'timeSlots.status': 'free' } }, // Match only documents with free time slots
-      { $group: { _id: '$timeSlots.hospitalLocation.city' } }, // Group by city to remove duplicates
-      { $sort: { _id: 1 } }, // Optionally sort by city name
-      { $project: { _id: 0, city: '$_id' } } // Project the city field
+      { $unwind: '$timeSlots' },
+      { $match: { 'timeSlots.status': 'free' } },
+      { $group: { _id: '$timeSlots.hospitalLocation.city' } },
+      { $match: { _id: { $ne: null } } }, 
+      { $sort: { _id: 1 } },
+      { $project: { _id: 0, city: '$_id' } }
     ]);
 
-    // Convert the results to an array of city names
     const cityList = cities.map(city => city.city);
-    console.log(cityList);
-    
     res.json(cityList);
   } catch (error) {
     res.status(500).json({ message: 'Error fetching cities', error });
   }
 });
 
+
 app.get('/auth/hospitals', async (req, res) => {
   try {
     const hospitals = await Doctor.aggregate([
       { $match: { role: 'doctor', verified: 'Verified', 'timeSlots.status': 'free' } },
       { $unwind: '$timeSlots' },
+      { $match: { 'timeSlots.hospital': { $ne: null } } }, 
       { $group: { _id: '$timeSlots.hospital' } },
       { $project: { _id: 0, hospital: '$_id' } }
     ]);
     const hospitalList = hospitals.map(hospital => hospital.hospital);
     res.json(hospitalList);
   } catch (error) {
-    res.status(500).json({ message: 'Error fetching hospitals', error });
-  }
+    res.status(500).json({ message: 'Error fetching hospitals', error });
+  }
 });
 
 
