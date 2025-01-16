@@ -1293,6 +1293,7 @@ router.post('/create-account', isAdmin, async (req, res) => {
           contactEmail: email,
           password: hashedPassword,
           role: 'supplier',
+          isVerified: true,
           createdByAdmin: true,
         });
         break;
