@@ -31,8 +31,6 @@ const generateVerificationToken = () => {
 };
 
 const sendVerificationEmail = async (name, email, token, role) => {
-    console.log("sending email");
-
     const transporter = nodemailer.createTransport({
         service: 'gmail',
         auth: {
@@ -69,8 +67,46 @@ const sendVerificationEmail = async (name, email, token, role) => {
     };
 
     await transporter.sendMail(mailOptions);
-    console.log("mail sent");
     
+};
+
+const sendSignupNotificationToAdmin = async (userData, role) => {
+  const transporter = nodemailer.createTransport({
+    service: 'gmail',
+    auth: {
+      user: process.env.EMAIL_USER,
+      pass: process.env.EMAIL_PASSWORD,
+    },
+  });
+
+  const mailOptions = {
+    from: process.env.EMAIL_USER,
+    to: process.env.ADMIN_EMAIL, 
+    subject: `🔔 New ${role.charAt(0).toUpperCase() + role.slice(1)} Signup Notification`,
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 10px;">
+        <h2 style="text-align: center; color: #FF7F50;">New ${role.charAt(0).toUpperCase() + role.slice(1)} Signup</h2>
+        
+        <p style="font-size: 16px;">Hello Admin,</p>
+        
+        <p style="font-size: 16px;">A new ${role} has signed up on MedxBay. Here are the details:</p>
+        
+        <ul style="font-size: 16px; line-height: 1.6;">
+          <li><strong>Name:</strong> ${userData.name}</li>
+          <li><strong>Email:</strong> ${userData.email}</li>
+          <li><strong>Phone Number:</strong> ${userData.phoneNumber}</li>
+        </ul>
+        
+        <p style="font-size: 16px;">Please review this information and take any necessary actions.</p>
+        
+        <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
+        
+        <p style="font-size: 14px; color: #777;">This is an automated notification. Please do not reply to this email.</p>
+      </div>
+    `,
+  };
+
+  await transporter.sendMail(mailOptions);
 };
 
 const sendWelcomeEmail = async (name, email, role) => {
@@ -136,6 +172,8 @@ router.post('/register', async (req, res) => {
         });
 
         await newSupplier.save();
+
+        await sendSignupNotificationToAdmin({ name, email, phoneNumber: phone },'supplier');
 
         req.flash('success_msg', 'Verification email has been sent to your email. Please verify.');
         res.redirect('/supplier/register');
