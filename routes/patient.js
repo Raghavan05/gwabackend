@@ -29,8 +29,8 @@ const fetchConversionRates = () => {
           hostname: 'currency-conversion-and-exchange-rates.p.rapidapi.com',
           path: '/latest?from=USD&to=INR,GBP,AED',
           headers: {
-              // 'x-rapidapi-key': '96f2128666msh6c2a99315734957p152189jsn585b9f07df21', // Add your RapidAPI key here
-              'x-rapidapi-key': 'e7f861ce3emshc756a74c6f16a9ep17c98ejsn86255ac2f58a', // Add your RapidAPI key here
+              'x-rapidapi-key': '96f2128666msh6c2a99315734957p152189jsn585b9f07df21', // Add your RapidAPI key here
+              // 'x-rapidapi-key': 'e7f861ce3emshc756a74c6f16a9ep17c98ejsn86255ac2f58a', // Add your RapidAPI key here
               'x-rapidapi-host': 'currency-conversion-and-exchange-rates.p.rapidapi.com'
           }
       };
@@ -483,7 +483,7 @@ router.post('/book', isLoggedIn, async (req, res) => {
     if (slotIndex === -1) {
       return res.status(400).send('Time slot not found');
     }
-    console.log(consultationType)
+
     if (consultationType === 'In-person') {
       // Create and save booking for in-person consultation
       const booking = new Booking({
@@ -530,7 +530,6 @@ router.post('/book', isLoggedIn, async (req, res) => {
       }
 
       // Create a Stripe checkout session for video consultation payment
-      console.log("Before stripe")
       const session = await stripe.checkout.sessions.create({
         payment_method_types: ['card'],
         line_items: [{
@@ -556,12 +555,12 @@ router.post('/book', isLoggedIn, async (req, res) => {
         cancel_url: `${req.protocol}://${req.get('host')}/api/patient/book/payment-failure`,
       });
       console.log("After stripe")
-      console.log(session);
+      // console.log(session);
       
 
       // Redirect to Stripe checkout
       console.log(session.url)
-      return res.json({ url: session.url });
+      return res.status(200).json({ url: session.url});
     }
   } catch (error) {
     console.error('Error creating Stripe session or booking:', error.message);
@@ -619,8 +618,8 @@ router.get('/book/payment-success', async (req, res) => {
 
       await sendPatientEmail(patient.email, booking);
       await sendDoctorEmail(doctor.email, booking);
-
-      res.render('patient-payment-success', { booking });
+      
+      res.status(200).json({message : "Payment completed",booking });
     } else {
       res.status(400).send('Payment not completed');
     }

@@ -176,6 +176,14 @@ router.post('/profile/update', isLoggedIn, async (req, res) => {
             };
         }
 
+        //Cover Photo
+        if (req.body.coverPhoto) {
+            updateData.coverPhoto = {
+                data: Buffer.from(req.body.coverPhoto.data, 'base64'),
+                contentType: req.body.coverPhoto.contentType,
+            };
+        }
+
         // License Proof
         if (req.body.documents.licenseProof) {
             updateData.documents = updateData.documents || {};
@@ -225,6 +233,12 @@ router.post('/profile/update', isLoggedIn, async (req, res) => {
         if (req.body.instagram) updateData.instagram = req.body.instagram;
         if (req.body.linkedin) updateData.linkedin = req.body.linkedin;
         if (req.body.specialization) updateData.specialization = req.body.specialization;
+        if (req.body.termsAndConditionsAccepted !== undefined) updateData.termsAndConditionsAccepted = req.body.termsAndConditionsAccepted;
+        if (req.body.showAwards !== undefined) updateData.showAwards = req.body.showAwards;
+        if (req.body.showFaq !== undefined) updateData.showFaq = req.body.showFaq;
+        if (req.body.showArticle !== undefined) updateData.showArticle = req.body.showArticle;
+        if (req.body.showInsurances !== undefined) updateData.showInsurances = req.body.showInsurances;
+        
         if (req.body.conditions) {
             updateData.conditions = Array.isArray(req.body.conditions) ? req.body.conditions : [req.body.conditions];
         }
@@ -235,10 +249,9 @@ router.post('/profile/update', isLoggedIn, async (req, res) => {
             updateData.languages = Array.isArray(req.body.languages) ? req.body.languages : [req.body.languages];
         }
         if (req.body.insurances) {
-            const newInsurances = (Array.isArray(req.body.insurances) ? req.body.insurances : [req.body.insurances]).map(id => id.toString());
-            const currentInsurances = new Set(doctor.insurances.map(id => id.toString()));
-            newInsurances.forEach(id => currentInsurances.add(id));
-            updateData.insurances = Array.from(currentInsurances);
+            const insuranceIds = (Array.isArray(req.body.insurances) ? req.body.insurances : [req.body.insurances])
+            .map(id => id.toString());
+            updateData.insurances = Array.from(insuranceIds);
         }
 
         if (req.body.awards) {
@@ -297,6 +310,10 @@ router.post('/profile/update', isLoggedIn, async (req, res) => {
         }
         if (req.body.treatmentApproach) {
             updateData.treatmentApproach = req.body.treatmentApproach;
+
+        }
+        if(req.body.termsAndConditionsAccepted){
+            
         }
 
 

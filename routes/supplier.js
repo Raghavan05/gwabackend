@@ -322,6 +322,10 @@ router.post('/update-profile', isLoggedIn, upload.fields([{ name: 'profileImage'
         tagline,
         address,
         overview,
+        showConditionLibrary, 
+        showReviews, 
+        showProducts, 
+        showCategories,
     } = req.body;
 
     // Convert productCategories to an array if it exists
@@ -344,7 +348,11 @@ router.post('/update-profile', isLoggedIn, upload.fields([{ name: 'profileImage'
     if (tagline) updateData.tagline = tagline;
     if (overview) updateData.overview = overview;
     if (productCategories) updateData.productCategories = productCategories;
-
+    if (showConditionLibrary) updateData.showConditionLibrary = showConditionLibrary === 'true';
+    if (showReviews) updateData.showReviews = showReviews === 'true';
+    if (showProducts) updateData.showProducts = showProducts === 'true';
+    if (showCategories) updateData.showCategories = showCategories === 'true';
+  
  // Handle address if provided
  if (address) {
     try {
@@ -635,6 +643,41 @@ router.get('/supplier/:id', async (req, res) => {
     } catch (err) {
         console.error('Error fetching supplier details:', err);
         res.redirect('/supplier/all-suppliers');
+    }
+});
+
+router.post('/:id/send-message', async (req, res) => {
+    try {
+        const { name, companyName, phone, email, interestedProduct, message, timeframe } = req.body;
+
+        const supplier = await Supplier.findById(req.params.id);
+        supplier.messages.push({
+            name,
+            companyName,
+            phone,
+            email,
+            interestedProduct,
+            message,
+            timeframe
+        });
+
+        await supplier.save();
+
+        await sendMessageEmail(
+            supplier.contactEmail,
+            name,
+            companyName,
+            phone,
+            email,
+            interestedProduct,
+            message,
+            timeframe
+        );
+
+        res.status(200).json({ message: 'Message sent successfully!' });
+    } catch (err) {
+        console.error('Error sending message:', err);
+        res.status(500).json({ message: 'Failed to send message.' });
     }
 });
 

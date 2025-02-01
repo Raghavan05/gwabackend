@@ -2,15 +2,12 @@ const mongoose = require('mongoose');
 
 const corporateSchema = new mongoose.Schema({
   corporateName: {
-    required: true,
     type: String,
   },
   email: {
-    required: true,
     type: String,
   },
   role: {
-    required: true,
     type: String,
   },
   mobileNumber: {
@@ -39,7 +36,6 @@ const corporateSchema = new mongoose.Schema({
   tagline: { type: String },
   overview: { type: String },
   password: {
-    required: true,
     type: String,
   },
   doctorReviews: [
@@ -104,15 +100,14 @@ const corporateSchema = new mongoose.Schema({
     ref: 'Supplier',
   }],
   doctors: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Doctor' }],
-  corporateSpecialties: [
-    {
-      name: { type: String },
-      image: {
-        data: Buffer,
-        contentType: String,
-      },
-    },
-  ],
+  corporateSpecialties: [{
+    type: String, 
+  }],
+  showSpecialties: { type: Boolean},  
+  showDoctors: { type: Boolean},      
+  showConditionLibrary: { type: Boolean },  
+  showReviews: { type: Boolean }, 
+
   createdByAdmin: { type: Boolean, default: false },
   profileVerification: [{
     email: { type: String },
@@ -122,6 +117,7 @@ const corporateSchema = new mongoose.Schema({
     },
     createdAt: { type: Date, default: Date.now } 
   }],
+
   profileTransferRequest: {
     type: String,
     enum: ['Accepted', 'Pending', 'Rejected', 'Idle'], 

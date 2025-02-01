@@ -5,7 +5,6 @@ const supplierSchema = new Schema({
     name: { type: String },
     contactEmail: { type: String },
     phone: { type: String },
-    role: { type: String },
     alternateContactNumber: { type: String },
     businessRegistrationNumber: { type: String },
     taxIdentificationNumber: { type: String },
@@ -57,12 +56,27 @@ const supplierSchema = new Schema({
           contentType: String
         },
         createdAt: { type: Date, default: Date.now } 
-      }], 
-    profileTransferRequest: {
+      }],
+    
+        profileTransferRequest: {
         type: String,
         enum: ['Accepted', 'Pending', 'Rejected', 'Idle'], 
         default: 'Idle'
-      }
+      },
+      messages: [{
+        name: { type: String, required: true },
+        companyName: { type: String },
+        phone: { type: String },
+        email: { type: String },
+        interestedProduct: { type: String },
+        message: { type: String },
+        timeframe: { type: String },
+        createdAt: { type: Date, default: Date.now },
+    }],
+    showConditionLibrary: { type: Boolean, default: false }, 
+    showReviews: { type: Boolean, default: false }, 
+    showProducts: { type: Boolean, default: false }, 
+    showCategories: { type: Boolean, default: false }, 
   });
   
 const Supplier = mongoose.model('Supplier', supplierSchema);

@@ -23,7 +23,7 @@ const doctorSchema = new mongoose.Schema({
   isVerified: { type: Boolean, default: false },
   title: String,
   aboutMe: { type: String },
-  speciality: { type: [String] },
+  speciality: { type: [String], required: true },
   country: String,
   state: String,
   city: String,
@@ -38,10 +38,10 @@ const doctorSchema = new mongoose.Schema({
   doctorFeeCurrency:{type: String, enum: ['usd', 'inr', 'gbp', 'aed']},
   hospitals: [{
       name: { type: String },
-      street: { type: String},
-      city: { type: String},
+      street: { type: String },
+      city: { type: String },
       state: { type: String },
-      country: { type: String },
+      country: { type: String},
       zip: { type: String },
     lat: { type: Number }, 
     lng: { type: Number }  
@@ -58,6 +58,10 @@ const doctorSchema = new mongoose.Schema({
     instagram: String
   },
   profilePicture: {
+    data: Buffer,
+    contentType: String
+  },
+  coverPhoto: {
     data: Buffer,
     contentType: String
   },
@@ -139,6 +143,7 @@ const doctorSchema = new mongoose.Schema({
   treatmentApproach: { type: String },
   
   createdByAdmin: { type: Boolean, default: false },
+  createdByCorporate: { type: Boolean, default: false},
   profileVerification: [{
     email: { type: String },
     document: {
@@ -147,11 +152,19 @@ const doctorSchema = new mongoose.Schema({
     },
     createdAt: { type: Date, default: Date.now } 
   }],
+
   profileTransferRequest: {
     type: String,
     enum: ['Accepted', 'Pending', 'Rejected', 'Idle'], 
     default: 'Idle'
-  }
+  },
+
+  termsAndConditionsAccepted: { type: Boolean},
+  showAwards: { type: Boolean},
+  showFaq: { type: Boolean},
+  showArticle: { type: Boolean },
+  showInsurances: { type: Boolean},
+
 });
 
 module.exports = mongoose.model('Doctor', doctorSchema);
