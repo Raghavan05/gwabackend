@@ -20,7 +20,7 @@ const router = express.Router();
 const Blog = require('../models/Blog');
 const Booking = require('../models/Booking');
 const Specialty = require('../models/Specialty');
-
+const Chat = require('../models/Chat');
 function isLoggedIn(req, res, next) {
   if (req.session.user && req.session.user.role === 'corporate') {
     req.user = req.session.user;
@@ -30,7 +30,7 @@ function isLoggedIn(req, res, next) {
 }
 
 function isCorporate(req, res, next) {
-  const corporateId = req.session.corporateId; // Get corporate ID from session
+  const corporateId = req.session.user?._id; // Get corporate ID from session
 
   if (corporateId) {
     req.user = req.session.user; // Attach user info to request
@@ -815,7 +815,6 @@ router.post('/send-invite', async (req, res) => {
   const {email, inviteLink } = req.body;
   
   const corporateId = req.session?.user?._id;
-  console.log(corporateId);
 
   if (!email || !inviteLink || !corporateId) {
     return res.status(400).json({ message: 'Email, invite link, and corporate ID are required' });
@@ -946,9 +945,8 @@ router.post('/claim-profile', upload.single('document'), async (req, res) => {
 router.get('/:corporateId/doctors', async (req, res) => {
   try {
     const { corporateId } = req.params;
-
-    // Check if the logged-in corporate matches the requested corporate
-    if (req.session.corporateId !== corporateId) {
+    // Check if the logged-in corporate matches the requested corporate    
+    if (req.session.user?._id !== corporateId) {
       req.flash('error_msg', 'Unauthorized access');
       return res.redirect('/corporate/login');
     }
@@ -1195,7 +1193,7 @@ router.post('/remove-doctor/:doctorId', isLoggedIn, async (req, res) => {
 });
 router.get('/corporate/doctor-patients/:doctorId', isLoggedIn, async (req, res) => {
   try {
-    const corporateId = req.session.corporateId;
+    const corporateId = req.session.user?._id;
     const { doctorId } = req.params;
 
     // Ensure only corporates can access this route
@@ -1224,7 +1222,7 @@ router.get('/create-account', isCorporate, (req, res) => {
   });
 });
 
-router.post('/create-account', isCorporate, async (req, res) => {
+router.post('/create-account', isCorporate, async (req, res) => {  
   const { name, email, password } = req.body;
   const corporateId = req.session.user?._id; // Get corporate ID from session
 
@@ -1275,6 +1273,10 @@ router.post('/create-account', isCorporate, async (req, res) => {
     await newDoctor.save();
 
     // Add corporate request to the doctor's corporateRequests field
+    if (!corporate.doctors.includes(newDoctor._id)) {
+      corporate.doctors.push(newDoctor._id);
+      await corporate.save();
+  }
     newDoctor.corporateRequests.push({
       corporateId: corporate._id,
       corporateName: corporate.corporateName,

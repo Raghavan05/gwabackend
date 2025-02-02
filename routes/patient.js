@@ -29,8 +29,8 @@ const fetchConversionRates = () => {
           hostname: 'currency-conversion-and-exchange-rates.p.rapidapi.com',
           path: '/latest?from=USD&to=INR,GBP,AED',
           headers: {
-              'x-rapidapi-key': '96f2128666msh6c2a99315734957p152189jsn585b9f07df21', // Add your RapidAPI key here
-              // 'x-rapidapi-key': 'e7f861ce3emshc756a74c6f16a9ep17c98ejsn86255ac2f58a', // Add your RapidAPI key here
+              // 'x-rapidapi-key': '96f2128666msh6c2a99315734957p152189jsn585b9f07df21', // Add your RapidAPI key here
+              'x-rapidapi-key': 'e7f861ce3emshc756a74c6f16a9ep17c98ejsn86255ac2f58a', // Add your RapidAPI key here
               'x-rapidapi-host': 'currency-conversion-and-exchange-rates.p.rapidapi.com'
           }
       };
