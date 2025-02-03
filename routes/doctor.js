@@ -155,7 +155,42 @@ router.get('/profile/update', isLoggedIn, async (req, res) => {
         res.status(500).send('Server Error');
     }
 });
+router.post('/profile/upload-cover', upload.single('coverPhoto'), isLoggedIn, async (req, res) => {
+    try {
+        if (!req.file) {
+            return res.status(400).send('No file uploaded.');
+        }
 
+        if (!req.file.mimetype.startsWith('image')) {
+            return res.status(400).send('Invalid file type. Please upload an image.');
+        }
+
+        const doctorId = req.session.user._id;
+
+        const updatedDoctor = await Doctor.findByIdAndUpdate(
+            doctorId, 
+            {
+                coverPhoto: {
+                    data: req.file.buffer,
+                    contentType: req.file.mimetype
+                }
+            },
+            { new: true }
+        );
+
+        if (!updatedDoctor) {
+            return res.status(404).send('Doctor not found.');
+        }
+
+        console.log("Updated doctor cover photo:", updatedDoctor); 
+
+        res.redirect('/doctor/profile');
+        
+    } catch (error) {
+        console.error("Error uploading cover photo:", error); 
+        res.status(500).send('Error uploading cover photo');
+    }
+});
 router.post('/profile/update', isLoggedIn, async (req, res) => {
     try {
 
@@ -176,13 +211,6 @@ router.post('/profile/update', isLoggedIn, async (req, res) => {
             };
         }
 
-        //Cover Photo
-        if (req.body.coverPhoto) {
-            updateData.coverPhoto = {
-                data: Buffer.from(req.body.coverPhoto.data, 'base64'),
-                contentType: req.body.coverPhoto.contentType,
-            };
-        }
 
         // License Proof
         if (req.body.documents.licenseProof) {

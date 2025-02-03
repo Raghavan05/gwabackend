@@ -646,6 +646,51 @@ router.get('/supplier/:id', async (req, res) => {
     }
 });
 
+const sendMessageEmail = async (supplierEmail, senderName, senderCompanyName, senderPhone, senderEmail, interestedProduct, message, timeframe) => {
+    const transporter = nodemailer.createTransport({
+        service: 'gmail',
+        auth: {
+            user: process.env.EMAIL_USER,
+            pass: process.env.EMAIL_PASSWORD
+        }
+    });
+
+    const mailOptions = {
+        from: process.env.EMAIL_USER,
+        to: supplierEmail,
+        subject: `New Message from ${senderName}`,
+        html: `
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 10px; background-color: #f9f9f9;">
+                <h2 style="color: #FF7F50; text-align: center;">You have a new message from ${senderName}</h2>
+                <p style="font-size: 16px;">Dear <strong>${senderName}</strong>,</p>
+                
+                <p style="font-size: 16px;">You have received a new message from <strong>${senderName}</strong>, and they are interested in the following product/service:</p>
+                
+                <p style="font-size: 16px;"><strong>Company Name:</strong> ${senderCompanyName || 'Not Provided'}</p>
+                <p style="font-size: 16px;"><strong>Phone:</strong> ${senderPhone}</p>
+                <p style="font-size: 16px;"><strong>Email:</strong> ${senderEmail}</p>
+                <p style="font-size: 16px;"><strong>Interested Product/Service:</strong> ${interestedProduct}</p>
+                <p style="font-size: 16px;"><strong>Message:</strong> ${message}</p>
+                <p style="font-size: 16px;"><strong>Timeframe:</strong> ${timeframe}</p>
+
+                <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
+                
+                <p style="font-size: 16px; color: #272848;">Best regards,</p>
+                <p style="font-size: 16px; color: #272848;"><strong>The MedxBay Team</strong></p>
+
+                <p style="font-size: 14px; color: #777;">If you have any questions or need assistance, feel free to contact us.</p>
+            </div>
+        `
+    };
+
+    try {
+        await transporter.sendMail(mailOptions);
+        console.log('Message email sent successfully.');
+    } catch (err) {
+        console.error('Error sending message email:', err);
+    }
+};
+
 router.post('/:id/send-message', async (req, res) => {
     try {
         const { name, companyName, phone, email, interestedProduct, message, timeframe } = req.body;
