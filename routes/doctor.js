@@ -182,8 +182,6 @@ router.post('/profile/upload-cover', upload.single('coverPhoto'), isLoggedIn, as
             return res.status(404).send('Doctor not found.');
         }
 
-        console.log("Updated doctor cover photo:", updatedDoctor); 
-
         res.redirect('/doctor/profile');
         
     } catch (error) {
@@ -232,9 +230,7 @@ router.post('/profile/update', isLoggedIn, async (req, res) => {
 
         // Business Proof
         if (req.body.documents.businessProof) {
-            console.log("inside business proof")
             updateData.documents = updateData.documents || {};
-            console.log("data exists " + req.body.documents.businessProof.data.length)
             updateData.documents.businessProof = {
                 data: Buffer.from(req.body.documents.businessProof.data, 'base64'),
                 contentType: req.body.documents.businessProof.contentType,
@@ -1071,8 +1067,6 @@ router.get('/subscribe', isLoggedIn, async (req, res) => {
 router.post('/subscribe', isLoggedIn, async (req, res) => {
     try {
         const { subscriptionType, subscriptionDuration } = req.body;
-        console.log(req.body);
-
         const paymentDetails = req.body.paymentDetails;
         const doctorId = req.session.user._id;
         const amount = parseInt(paymentDetails.amount, 10);
@@ -1475,13 +1469,13 @@ router.get('/chat/:id', isLoggedIn, checkSubscription, async (req, res) => {
     try {
         const chatId = req.params.id;
 
-        console.log('Request Details:', {
-            method: req.method,
-            url: req.url,
-            params: req.params,
-            query: req.query,
-            user: req.user
-        });
+        // console.log('Request Details:', {
+        //     method: req.method,
+        //     url: req.url,
+        //     params: req.params,
+        //     query: req.query,
+        //     user: req.user
+        // });
 
         const chat = await Chat.findById(chatId)
             .populate('patientId', 'name email profilePicture')
@@ -1508,7 +1502,7 @@ router.get('/chat/:id', isLoggedIn, checkSubscription, async (req, res) => {
         // Update the chat in the database with the read messages
         await Chat.findByIdAndUpdate(chatId, { $set: { messages: chat.messages } });
 
-        console.log('Updated Chat Data:', chat);
+        // console.log('Updated Chat Data:', chat);
 
         // Send JSON response with chat data
         res.json({

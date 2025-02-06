@@ -281,7 +281,7 @@ const sendWelcomeEmail = async (name, email, role) => {
 router.get('/verify-email', async (req, res) => {
   const { token, role } = req.query;
 
-  console.log('Received token:', token, 'and role:', role);
+  // console.log('Received token:', token, 'and role:', role);
 
   try {
       let user;

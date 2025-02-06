@@ -30,7 +30,7 @@ const fetchConversionRates = () => {
           path: '/latest?from=USD&to=INR,GBP,AED',
           headers: {
               // 'x-rapidapi-key': '96f2128666msh6c2a99315734957p152189jsn585b9f07df21', // Add your RapidAPI key here
-              'x-rapidapi-key': 'e7f861ce3emshc756a74c6f16a9ep17c98ejsn86255ac2f58a', // Add your RapidAPI key here
+              'x-rapidapi-key': '073ce9e600msh5d659e6e6032131p13e986jsne8126dc07264', // Add your RapidAPI key here
               'x-rapidapi-host': 'currency-conversion-and-exchange-rates.p.rapidapi.com'
           }
       };
@@ -46,10 +46,6 @@ const fetchConversionRates = () => {
               const body = Buffer.concat(chunks);
               try {
                   const data = JSON.parse(body.toString());
-
-                  // Log the API response to check what data is returned
-                  console.log('API response:', data);
-
                   // Check if rates exist and resolve only valid rates
                   if (data && data.rates) {
                       resolve(data.rates);
@@ -344,10 +340,10 @@ router.get('/doctors', async (req, res) => {
   }
 });
 
-router.get('/doctors/:id/slots', async (req, res) => {
+router.get('/doctors/:slug/slots', async (req, res) => {
   try {
-      const doctorId = req.params.id;
-      const doctor = await Doctor.findById(doctorId)
+      const slug = req.params.slug;
+      const doctor = await Doctor.findOne({ slug })  
           .populate({
               path: 'reviews.patientId',
               select: 'name'
@@ -358,7 +354,7 @@ router.get('/doctors/:id/slots', async (req, res) => {
       }
 
       const insurances = await Insurance.find({ '_id': { $in: doctor.insurances } }).select('name logo');
-      const blogs = await Blog.find({ authorId: doctorId, verificationStatus: 'Verified' });
+      const blogs = await Blog.find({ authorId: doctor._id, verificationStatus: 'Verified' });
 
       const conversionRates = await fetchConversionRates();
 
@@ -453,9 +449,7 @@ router.get('/doctors/:id/slots', async (req, res) => {
 //       res.status(500).json({ error: 'Server error' });
 //   }
 // });
-router.post('/book', isLoggedIn, async (req, res) => {
-  console.log(req.body);
-  
+router.post('/book', isLoggedIn, async (req, res) => {  
   try {
     const { doctorId, date, startTime, consultationType, currency } = req.body;
     const patientId = req.session.user._id;
@@ -635,7 +629,6 @@ router.get('/bookings', isLoggedIn, async (req, res) => {
   try {
     const bookings = await Booking.find({ patient: req.session.user._id }).populate('doctor');
     res.json({ bookings });
-    console.log({bookings});
     
   } catch (error) {
     console.error(error.message);
@@ -1090,7 +1083,6 @@ router.get('/priority-blogs', async (req, res) => {
             subscriptionVerification: 'Verified' 
         }).sort({ rating: -1 }).limit(5).lean();
 
-        console.log(topRatedDoctors);
         // Render the view with blogs, categories, hashtags, top-rated doctors, and additional sections
         res.json({ 
             featuredBlogs,
@@ -1289,7 +1281,6 @@ router.get('/blogs/conditions/:condition/hashtag/:hashtag', async (req, res) => 
       })
           .sort({ priority: -1 }) 
           .limit(5);
-      console.log(topPriorityBlogs);
 
       const recentBlogs = await Blog.find({ 
           conditions: condition,
@@ -1957,19 +1948,20 @@ router.get('/all-suppliers', async (req, res) => {
   }
 });
 
-router.get('/corporate/:corporateId', async (req, res) => {
-  const { corporateId } = req.params;
-  // const patientId = req.session.user?._id; 
+router.get('/corporate/:slug', async (req, res) => {
+  const { slug } = req.params;  
+  // const patientId = req.session.user._id; 
 
   try {
-    const corporates = await Corporate.findById(corporateId).populate('doctors'); 
+    const corporates = await Corporate.findOne({ slug }) 
+      .populate('doctors'); 
+    
     if (!corporates) {
       req.flash('error_msg', 'Corporate not found');
-      return res.redirect('/patient/corporate-list');
     }
 
     // const patient = await Patient.findById(patientId);
-    // const isFollowing = patient.followedCorporates.includes(corporateId);
+    // const isFollowing = patient.followedCorporates.includes(corporates._id); 
 
     const verifiedBlogs = await Blog.find({
       authorId: { $in: corporates.doctors.map(doctor => doctor._id) },
@@ -1982,7 +1974,7 @@ router.get('/corporate/:corporateId', async (req, res) => {
         select: 'name profilePicture',
       });
 
-    const corporatesWithReviews = await Corporate.findById(corporateId)
+    const corporatesWithReviews = await Corporate.findOne({ slug })
       .populate({
         path: 'patientReviews.patientId',
         model: 'Patient',
@@ -1996,7 +1988,8 @@ router.get('/corporate/:corporateId', async (req, res) => {
 
     corporatesWithReviews.patientReviews = corporatesWithReviews.patientReviews.filter(review => review.showOnPage);
     corporatesWithReviews.doctorReviews = corporatesWithReviews.doctorReviews.filter(review => review.showOnPage);
-      const responseData = {
+
+    const responseData = {
       corporate: corporatesWithReviews,
       doctors: corporates.doctors,
       // isFollowing,
@@ -2007,7 +2000,6 @@ router.get('/corporate/:corporateId', async (req, res) => {
   } catch (err) {
     console.error('Error fetching corporate details:', err);
     req.flash('error_msg', 'Error fetching corporate details');
-    res.redirect('/patient/corporate-list');
   }
 });
 

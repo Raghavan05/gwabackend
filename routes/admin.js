@@ -217,7 +217,6 @@ router.post('/update-doctor/:doctorId',/* isAdmin,*/ async (req, res) => {
   try {
       const doctorId = req.params.doctorId;
       let doctor = await Doctor.findById(doctorId);
-      console.log(req.body);
       let hospitals = [];
       if (Array.isArray(req.body.hospitals)) {
           hospitals = req.body.hospitals.map(hospital => ({
@@ -947,13 +946,11 @@ router.get('/booking-details/:bookingId', isLoggedIn, isAdmin, async (req, res) 
       if (!booking) {
           return res.status(404).send('Booking not found');
       }
-      console.log(booking.doctor)
       // Fetch the doctor details using doctorId
       const doctor = await Doctor.findById(booking.doctor, 'name email').lean();
       if (!doctor) {
           return res.status(404).send('Doctor not found');
       }
-      console.log(doctor);
       // Fetch the patient details using patientId
       const patient = await Patient.findById(booking.patient, 'name').lean();
       if (!patient) {
@@ -1048,14 +1045,13 @@ router.post('/update-payments/:doctorId', isAdmin, async (req, res) => {
       // Check if tempDoctorFee is provided in the request body
       if (req.body.tempDoctorFee !== undefined) {
           updateData.tempDoctorFee = req.body.tempDoctorFee * 100;
-          console.log(updateData); // Convert to cents (assuming the value in the form is in dollars)
+           // Convert to cents (assuming the value in the form is in dollars)
       }
 
       // Check if tempDoctorFeeStatus is provided in the request body
       if (req.body.tempDoctorFeeStatus !== undefined) {
           updateData.tempDoctorFeeStatus = req.body.tempDoctorFeeStatus;
       }
-      console.log(updateData)
 
       // Update the doctor document with the new values
       const doctor = await Doctor.findByIdAndUpdate(doctorId, updateData, { new: true });
@@ -1120,7 +1116,6 @@ router.get('/insights', async (req, res) => {
           },
           { $sort: { _id: 1 } } 
       ]);
-      console.log(bookingRates);
       
 
       res.json({
@@ -1345,9 +1340,6 @@ router.get('/accounts', async (req, res) => {
         profileTransferRequest: s.profileTransferRequest || 'N/A',
       })),
     ];
-
-    console.log(accounts);
-
     res.json({accounts, activePage: 'accounts' });
   } catch (err) {
     console.error(err);

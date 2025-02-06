@@ -359,7 +359,7 @@ router.get('/profile', async (req, res) => {
 
 router.get('/edit-profile', async (req, res) => {
   try {
-    const corporateId = req.session.user._id;
+    const corporateId = req.session.user?._id;
     const corporate = await Corporate.findById(corporateId);
 
     if (!corporate) {
@@ -476,7 +476,6 @@ router.post('/add-specialty', upload.single('image'), async (req, res) => {
     };
 
     const corporate = await Corporate.findById(req.session?.user._id);
-    console.log(corporate);
 
     corporate.corporateSpecialties.push(newSpecialty);
     await corporate.save();
@@ -602,7 +601,6 @@ router.get('/followers', async (req, res) => {
       path: 'followers',
       select: 'name profilePicture',
     });
-    console.log(corporate);
 
     if (!corporate) {
       req.flash('error_msg', 'Corporate profile not found');
@@ -857,7 +855,7 @@ router.get('/corporate-list', async (req, res) => {
 
   try {
     const corporates = await Corporate.find(filter)
-      .select('corporateName tagline address profilePicture')
+      .select('corporateName tagline address profilePicture slug')
       .populate({
         path: 'doctors',
         match: {
@@ -1205,7 +1203,6 @@ router.get('/corporate/doctor-patients/:doctorId', isLoggedIn, async (req, res) 
     const completedBookings = await Booking.find({ doctor: doctorId, status: 'completed' })
       .populate('patient')
       .populate('doctor');
-    console.log(completedBookings);
 
     res.json({completedBookings, doctorId });
   } catch (error) {

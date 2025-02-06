@@ -570,7 +570,7 @@ router.get('/all-suppliers', async (req, res) => {
 
     try {
         const suppliers = await Supplier.find(filter)
-            .select('name tagline address profilePicture createdByAdmin profileTransferRequest')
+            .select('name tagline address profilePicture createdByAdmin profileTransferRequest slug')
             .lean();
 
         const countries = await Supplier.distinct('address.country');
@@ -623,9 +623,9 @@ router.post('/claim-profile', upload.single('document'), async (req, res) => {
     }
 });
 
-router.get('/supplier/:id', async (req, res) => {
+router.get('/supplier/:slug', async (req, res) => {
     try {
-        const supplier = await Supplier.findById(req.params.id);
+        const supplier = await Supplier.findOne({ slug: req.params.slug });
         const products = await Product.find({ uploadedBy: req.params.id, countInStock: { $gt: 0 } });
         const blogs = await Blog.find({ authorId: req.params.id });
 
