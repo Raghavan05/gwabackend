@@ -22,54 +22,65 @@ const https = require('https');
 const Condition = require('../models/Condition');
 const NewsRelease = require('../models/NewsRelease');  
 const NewsLogo = require('../models/NewsLogo');const Supplier = require('../models/Supplier');
-const fetchConversionRates = () => {
-  return new Promise((resolve, reject) => {
+const fetchConversionRates = async () => {
+  try {
+      const https = require('https');
+
       const options = {
           method: 'GET',
           hostname: 'currency-conversion-and-exchange-rates.p.rapidapi.com',
           path: '/latest?from=USD&to=INR,GBP,AED',
           headers: {
-              // 'x-rapidapi-key': '96f2128666msh6c2a99315734957p152189jsn585b9f07df21', // Add your RapidAPI key here
-              'x-rapidapi-key': '073ce9e600msh5d659e6e6032131p13e986jsne8126dc07264', // Add your RapidAPI key here
+              'x-rapidapi-key': '073ce9e600msh5d659e6e6032131p13e986jsne8126dc07264',
               'x-rapidapi-host': 'currency-conversion-and-exchange-rates.p.rapidapi.com'
           }
       };
 
-      const req = https.request(options, (res) => {
-          let chunks = [];
+      return new Promise((resolve, reject) => {
+          const req = https.request(options, (res) => {
+              let chunks = [];
 
-          res.on('data', (chunk) => {
-              chunks.push(chunk);
-          });
+              res.on('data', (chunk) => {
+                  chunks.push(chunk);
+              });
 
-          res.on('end', () => {
-              const body = Buffer.concat(chunks);
-              try {
-                  const data = JSON.parse(body.toString());
-                  // Check if rates exist and resolve only valid rates
-                  if (data && data.rates) {
-                      resolve(data.rates);
-                  } else {
-                      reject(new Error('Invalid API response or missing rates'));
+              res.on('end', () => {
+                  const body = Buffer.concat(chunks).toString();
+                  console.log("Full API Response:", body); // Debugging
+
+                  try {
+                      const data = JSON.parse(body);
+                      if (data && data.rates) {
+                          resolve(data.rates);
+                      } else {
+                          console.warn("Invalid API response, using default rates.");
+                          resolve({ INR: 82.5, GBP: 0.73, AED: 3.67 }); // Default rates
+                      }
+                  } catch (err) {
+                      console.error("Error parsing API response:", err.message);
+                      resolve({ INR: 82.5, GBP: 0.73, AED: 3.67 }); // Default rates
                   }
-              } catch (err) {
-                  reject(new Error('Error parsing API response'));
-              }
+              });
           });
-      });
 
-      req.on('error', (e) => {
-          reject(e);
-      });
+          req.on('error', (e) => {
+              console.error("Currency API Request Failed:", e.message);
+              resolve({ INR: 82.5, GBP: 0.73, AED: 3.67 }); // Default rates
+          });
 
-      req.end();
-  });
+          req.end();
+      });
+  } catch (error) {
+      console.error("Unexpected error in fetchConversionRates:", error.message);
+      return { INR: 82.5, GBP: 0.73, AED: 3.67 }; // Default rates
+  }
 };
+
 const transporter = nodemailer.createTransport({
   service: 'gmail', // Example with Gmail
   auth: {
     user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASSWORD
+    pass:   process.env.EMAIL_PASSWORD
   }
 });
 
