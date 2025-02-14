@@ -463,7 +463,7 @@ router.get('/doctors/:slug/slots', async (req, res) => {
 router.post('/book', isLoggedIn, async (req, res) => {  
   try {
     const { doctorId, date, startTime, consultationType, currency } = req.body;
-    const patientId = req.session.user._id;
+    const patientId = req.session.user?._id;
 
     // Validate date and time format
     const parsedDate = new Date(date);
@@ -577,7 +577,7 @@ router.post('/book', isLoggedIn, async (req, res) => {
 router.get('/book/payment-success', async (req, res) => {
   try {
     const { doctorId, date, startTime, consultationType, session_id } = req.query;
-    const patientId = req.session.user._id;
+    const patientId = req.session.user?._id;
 
     const session = await stripe.checkout.sessions.retrieve(session_id);
 
@@ -638,7 +638,7 @@ router.get('/book/payment-success', async (req, res) => {
 
 router.get('/bookings', isLoggedIn, async (req, res) => {
   try {
-    const bookings = await Booking.find({ patient: req.session.user._id }).populate('doctor');
+    const bookings = await Booking.find({ patient: req.session.user?._id }).populate('doctor');
     res.json({ bookings });
     
   } catch (error) {
@@ -693,7 +693,7 @@ router.post('/review/:doctorId/:bookingId', isLoggedIn, async (req, res) => {
 router.post('/add-to-favorites', isLoggedIn, async (req, res) => {
   try {
     const { doctorId } = req.body;
-    const patientId = req.session.user._id;
+    const patientId = req.session.user?._id;
 
     const patient = await Patient.findById(patientId);
     const doctor = await Doctor.findById(doctorId);
@@ -723,7 +723,7 @@ router.post('/add-to-favorites', isLoggedIn, async (req, res) => {
 
 router.get('/favorites', isLoggedIn, async (req, res) => {
   try {
-    const patientId = req.session.user._id;
+    const patientId = req.session.user?._id;
     const patient = await Patient.findById(patientId).populate({
       path: 'favoriteDoctors',
       model: 'Doctor'
@@ -743,7 +743,7 @@ router.get('/favorites', isLoggedIn, async (req, res) => {
 
 router.get('/calendar', isLoggedIn, async (req, res) => {
   try {
-      const patientId = req.session.user._id; 
+      const patientId = req.session.user?._id; 
       const patient = await Patient.findById(patientId);
       if (!patient) {
           return res.status(404).send('Patient not found');
@@ -1621,7 +1621,7 @@ router.post('/chats/:chatId/send-message', isLoggedIn, async (req, res) => {
 
 router.get('/prescriptions', isLoggedIn, async (req, res) => {
   try {
-    const patientId = req.session.user._id;
+    const patientId = req.session.user?._id;
     const patientPrescriptions = await Prescription.find({ patientId: patientId })
       .sort({ createdAt: 'desc' });
 
@@ -2016,7 +2016,7 @@ router.get('/corporate/:slug', async (req, res) => {
 
 router.post('/corporate/:corporateId/follow', async (req, res) => {
   const { corporateId } = req.params;
-  const patientId = req.session.user._id;
+  const patientId = req.session.user?._id;
 
   try {
     const corporates = await Corporate.findById(corporateId);
@@ -2053,7 +2053,7 @@ router.post('/corporate/:corporateId/follow', async (req, res) => {
 router.post('/corporate/:corporateId/review', async (req, res) => {
   const { corporateId } = req.params;
   const { reviewText, rating } = req.body; 
-  const patientId = req.session.user._id;
+  const patientId = req.session.user?._id;
 
   try {
     if (rating < 1 || rating > 5) {

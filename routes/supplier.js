@@ -13,7 +13,7 @@ const Order = require('../models/Order');
 const Blog = require('../models/Blog');
 
 function isLoggedIn(req, res, next) {
-    if (req.session && req.session.user._id) {
+    if (req.session && req.session.user?._id) {
         return next(); 
     } else {
         console.warn('Unauthorized access attempt:', {
